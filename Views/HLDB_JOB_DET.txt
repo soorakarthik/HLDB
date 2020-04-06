@@ -1,0 +1,33 @@
+CREATE OR REPLACE VIEW public.hldb_job_det AS
+ SELECT los_job_det.prtf_n,
+    los_job_det.aplt_n,
+    los_job_det.job_n,
+    los_job_det.job_freq_n,
+    los_job_det.job_ord_day_n,
+    los_job_det.job_los_day_n,
+    los_job_det.job_los_day_q,
+    los_job_det.job_cmpl_hr_i,
+    los_job_det.job_los_hr_t,
+    los_job_det.job_mtrc_ct_q,
+    los_job_det.eff_d,
+    los_job_det.expr_d,
+    los_job_det.actv_f,
+    'BIE Flow'::text AS category
+   FROM los.los_job_det
+  WHERE los_job_det.mstr_end_job_f = 'Y'::bpchar
+UNION ALL
+ SELECT los_crit_job_det_all.pyrm_n AS prtf_n,
+    los_crit_job_det_all.rpt_n AS aplt_n,
+    los_crit_job_det_all.job_n,
+    los_crit_job_det_all.job_freq_n,
+    los_crit_job_det_all.job_ord_day_n,
+    los_crit_job_det_all.job_los_day_n,
+    los_crit_job_det_all.job_los_day_q,
+    los_crit_job_det_all.job_cmpl_hr_i,
+    los_crit_job_det_all.job_los_hr_t,
+    los_crit_job_det_all.mtrc_ct_q AS job_mtrc_ct_q,
+    los_crit_job_det_all.eff_d,
+    los_crit_job_det_all.expr_d,
+    los_crit_job_det_all.actv_f,
+    'Critical Report'::text AS category
+   FROM los.los_crit_job_det_all;

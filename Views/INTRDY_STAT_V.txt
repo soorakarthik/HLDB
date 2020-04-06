@@ -1,0 +1,25 @@
+CREATE OR REPLACE VIEW public.intrdy_stat_v AS
+ SELECT a.entity_name AS "Name",
+    a.hipchat_link,
+    a.hipchat_label,
+    a.lag_det_link,
+    a.lag_det_label,
+    b.lag_health,
+        CASE
+            WHEN b.lag_health = 0 THEN 'GREEN'::text
+            WHEN b.lag_health = 3 THEN 'RED'::text
+            WHEN b.lag_health = 1 THEN 'GREY'::text
+            ELSE NULL::text
+        END AS "Health Status",
+    b.lag_status
+   FROM pltf_prtf_det a
+     LEFT JOIN ( SELECT inr.prtf_n,
+            inr.lag_health,
+            inr.lag_status
+           FROM ( SELECT lag_det_v.prtf_n,
+                    lag_det_v.lag_health,
+                    lag_det_v.lag_status,
+                    row_number() OVER (PARTITION BY lag_det_v.prtf_n ORDER BY lag_det_v.lag_health DESC, lag_det_v.lag_status DESC) AS rank_id
+                   FROM lag_det_v) inr
+          WHERE inr.rank_id = 1) b ON a.entity_name::text = b.prtf_n::text
+  WHERE a.lag_det_f = 'Y'::bpchar;

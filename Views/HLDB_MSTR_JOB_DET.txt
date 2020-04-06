@@ -1,0 +1,113 @@
+CREATE OR REPLACE VIEW public.hldb_mstr_job_det AS
+ SELECT final.prtf_n,
+    final.aplt_n,
+    final.job_n,
+    final.job_freq_n,
+    final.job_ord_day_n,
+    final.job_los_day_n,
+    final.job_los_day_q,
+    final.job_los_hr_t,
+    final.job_cmpl_hr_i,
+    final.job_mtrc_ct_q,
+    final.eff_d,
+    final.expr_d,
+    final.actv_f,
+    final.category,
+    final.greg_d,
+    final.day_n,
+    final.rpt_day_n,
+    date(final.ord_d) AS ord_d,
+    date(final.ord_d) + final.job_los_day_q::integer AS rpt_d,
+    date(final.wk_end_d) AS wk_end_d
+   FROM ( SELECT hldb_job_det.prtf_n,
+            hldb_job_det.aplt_n,
+            hldb_job_det.job_n,
+            hldb_job_det.job_freq_n,
+            hldb_job_det.job_ord_day_n,
+            hldb_job_det.job_los_day_n,
+            hldb_job_det.job_los_day_q,
+            hldb_job_det.job_los_hr_t,
+            hldb_job_det.job_cmpl_hr_i,
+            hldb_job_det.job_mtrc_ct_q,
+            hldb_job_det.eff_d,
+            hldb_job_det.expr_d,
+            hldb_job_det.actv_f,
+            hldb_job_det.category,
+            b.greg_d,
+                CASE
+                    WHEN hldb_job_det.job_freq_n::text = ANY (ARRAY['Daily'::character varying::text, 'Intraday'::character varying::text]) THEN b.day_n
+                    ELSE hldb_job_det.job_ord_day_n
+                END AS day_n,
+                CASE
+                    WHEN (hldb_job_det.job_freq_n::text = ANY (ARRAY['Daily'::character varying::text, 'Intraday'::character varying::text])) AND hldb_job_det.job_los_day_n::text = 'Next-Day'::text THEN
+                    CASE
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 0 THEN 'Tuesday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 1 THEN 'Wednesday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 2 THEN 'Thursday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 3 THEN 'Friday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 4 THEN 'Saturday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 5 THEN 'Sunday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 6 THEN 'Monday'::text
+                        ELSE NULL::text
+                    END::character varying
+                    WHEN (hldb_job_det.job_freq_n::text = ANY (ARRAY['Daily'::character varying::text, 'Intraday'::character varying::text])) AND hldb_job_det.job_los_day_n::text = 'Day-After-Next'::text THEN
+                    CASE
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 0 THEN 'Wednesday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 1 THEN 'Thursday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 2 THEN 'Friday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 3 THEN 'Saturday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 4 THEN 'Sunday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 5 THEN 'Monday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 6 THEN 'Tuesday'::text
+                        ELSE NULL::text
+                    END::character varying
+                    WHEN hldb_job_det.job_freq_n::text = 'Daily'::text AND hldb_job_det.job_los_day_n::text = 'Same-Day'::text THEN
+                    CASE
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 0 THEN 'Monday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 1 THEN 'Tuesday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 2 THEN 'Wednesday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 3 THEN 'Thursday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 4 THEN 'Friday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 5 THEN 'Saturday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 6 THEN 'Sunday'::text
+                        ELSE NULL::text
+                    END::character varying
+                    ELSE hldb_job_det.job_los_day_n
+                END AS rpt_day_n,
+                CASE
+                    WHEN hldb_job_det.job_freq_n::text = 'Weekly'::text AND hldb_job_det.job_ord_day_n::text = 'Sunday'::text THEN b.acct_wk_beg_d::timestamp without time zone
+                    WHEN hldb_job_det.job_freq_n::text = 'Weekly'::text AND hldb_job_det.job_ord_day_n::text = 'Monday'::text THEN b.acct_wk_beg_d + '1 day'::interval day
+                    WHEN hldb_job_det.job_freq_n::text = 'Weekly'::text AND hldb_job_det.job_ord_day_n::text = 'Tuesday'::text THEN b.acct_wk_beg_d + '2 days'::interval day
+                    WHEN hldb_job_det.job_freq_n::text = 'Weekly'::text AND hldb_job_det.job_ord_day_n::text = 'Wednesday'::text THEN b.acct_wk_beg_d + '3 days'::interval day
+                    WHEN hldb_job_det.job_freq_n::text = 'Weekly'::text AND hldb_job_det.job_ord_day_n::text = 'Thursday'::text THEN b.acct_wk_beg_d + '4 days'::interval day
+                    WHEN hldb_job_det.job_freq_n::text = 'Weekly'::text AND hldb_job_det.job_ord_day_n::text = 'Friday'::text THEN b.acct_wk_beg_d + '5 days'::interval day
+                    WHEN hldb_job_det.job_freq_n::text = 'Weekly'::text AND hldb_job_det.job_ord_day_n::text = 'Saturday'::text THEN b.acct_wk_beg_d + '6 days'::interval day
+                    WHEN hldb_job_det.job_freq_n::text = 'Monthly'::text AND hldb_job_det.job_ord_day_n::text = 'Sunday'::text THEN b.acct_mo_beg_d::timestamp without time zone
+                    WHEN hldb_job_det.job_freq_n::text = 'Monthly'::text AND hldb_job_det.job_ord_day_n::text = 'Monday'::text THEN b.acct_mo_beg_d + '1 day'::interval day
+                    WHEN hldb_job_det.job_freq_n::text = 'Monthly'::text AND hldb_job_det.job_ord_day_n::text = 'Tueday'::text THEN b.acct_mo_beg_d + '2 days'::interval day
+                    WHEN hldb_job_det.job_freq_n::text = 'Monthly'::text AND hldb_job_det.job_ord_day_n::text = 'Wednesday'::text THEN b.acct_mo_beg_d + '3 days'::interval day
+                    WHEN hldb_job_det.job_freq_n::text = 'Monthly'::text AND hldb_job_det.job_ord_day_n::text = 'Thursday'::text THEN b.acct_mo_beg_d + '4 days'::interval day
+                    WHEN hldb_job_det.job_freq_n::text = 'Monthly'::text AND hldb_job_det.job_ord_day_n::text = 'Friday'::text THEN b.acct_mo_beg_d + '5 days'::interval day
+                    WHEN hldb_job_det.job_freq_n::text = 'Monthly'::text AND hldb_job_det.job_ord_day_n::text = 'Saturday'::text THEN b.acct_mo_beg_d + '6 days'::interval day
+                    WHEN hldb_job_det.job_freq_n::text = 'Daily'::text THEN b.greg_d::timestamp without time zone
+                    WHEN hldb_job_det.job_freq_n::text = 'Intraday'::text THEN b.greg_d::timestamp without time zone
+                    ELSE NULL::timestamp without time zone
+                END AS ord_d,
+                CASE
+                    WHEN hldb_job_det.job_freq_n::text = 'Daily'::text THEN b.acct_wk_end_d::timestamp without time zone
+                    WHEN hldb_job_det.job_freq_n::text = 'Intraday'::text THEN b.acct_wk_end_d::timestamp without time zone
+                    WHEN hldb_job_det.job_freq_n::text = 'Weekly'::text AND (hldb_job_det.job_ord_day_n::text = ANY (ARRAY['Thursday'::text, 'Friday'::text, 'Saturday'::text])) THEN b.acct_wk_beg_d + '6 days'::interval day
+                    WHEN hldb_job_det.job_freq_n::text = 'Monthly'::text AND hldb_job_det.job_ord_day_n::text = 'Sunday'::text THEN b.acct_mo_beg_d - '1 day'::interval day
+                    WHEN hldb_job_det.job_freq_n::text = 'Monthly'::text AND hldb_job_det.job_ord_day_n::text = 'Monday'::text THEN b.acct_mo_beg_d - '1 day'::interval day
+                    WHEN hldb_job_det.job_freq_n::text = 'Monthly'::text AND hldb_job_det.job_ord_day_n::text = 'Tuesday'::text THEN b.acct_mo_beg_d - '1 day'::interval day
+                    WHEN hldb_job_det.job_freq_n::text = 'Monthly'::text AND hldb_job_det.job_ord_day_n::text = 'Wednesday'::text THEN b.acct_mo_beg_d - '1 day'::interval day
+                    WHEN hldb_job_det.job_freq_n::text = 'Monthly'::text AND hldb_job_det.job_ord_day_n::text = 'Thursday'::text THEN b.acct_mo_beg_d - '1 day'::interval day
+                    WHEN hldb_job_det.job_freq_n::text = 'Monthly'::text AND hldb_job_det.job_ord_day_n::text = 'Friday'::text THEN b.acct_mo_beg_d + '6 days'::interval day
+                    WHEN hldb_job_det.job_freq_n::text = 'Monthly'::text AND hldb_job_det.job_ord_day_n::text = 'Saturday'::text THEN b.acct_mo_beg_d + '6 days'::interval day
+                    ELSE b.prev_wk_eow_d::timestamp without time zone
+                END AS wk_end_d
+           FROM hldb_job_det
+             JOIN los.cal_date_dim b ON 1 = 1
+          WHERE b.greg_d >= (( SELECT cal_date_dim.acct_yr_beg_d - 5
+                   FROM los.cal_date_dim
+                  WHERE cal_date_dim.greg_d = 'now'::text::date)) AND b.greg_d <= 'now'::text::date AND hldb_job_det.actv_f = 'Y'::bpchar) final;

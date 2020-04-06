@@ -1,0 +1,23 @@
+-- Drop table
+
+-- DROP TABLE los.dataportal_job_events_dedupe
+
+CREATE TABLE los.dataportal_job_events_dedupe (
+	eventtimestamp timestamp NULL,
+	objectuuid text NULL,
+	objecttype text NULL,
+	eventstart timestamp NULL,
+	eventend timestamp NULL,
+	status text NULL,
+	meta json NULL,
+	eventuuid text NULL,
+	pg_timestamp timestamp NULL DEFAULT now(),
+	created timestamp NULL
+)
+WITH (
+	OIDS=FALSE
+) ;
+CREATE UNIQUE INDEX dataportal_job_events_dedupe_events ON los.dataportal_job_events_dedupe USING btree (eventuuid) ;
+CREATE INDEX dedupe_objectuuid_index ON los.dataportal_job_events_dedupe USING btree (objectuuid) ;
+CREATE INDEX event_start_index_dedupe ON los.dataportal_job_events_dedupe USING btree (eventstart) ;
+CREATE INDEX eventtimestamp_index_dedupe ON los.dataportal_job_events_dedupe USING btree (eventtimestamp) ;

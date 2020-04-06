@@ -1,0 +1,36 @@
+CREATE OR REPLACE VIEW public.pltf_hlth_curr_v_old AS
+ SELECT ot.platform,
+    max(ot.health) AS health_status
+   FROM ( SELECT pltf.platform,
+            pltf.alert,
+            pltf.message,
+            pltf."timestamp",
+            pltf.health,
+            pltf.rank_id
+           FROM ( SELECT a1.platform,
+                    a1.alert,
+                    a1.message,
+                    a1."timestamp",
+                    a1.health,
+                    row_number() OVER (PARTITION BY a1.platform, a1.alert ORDER BY a1.platform, a1.alert, a1."timestamp" DESC) AS rank_id
+                   FROM ( SELECT b.platform,
+                            b.alert,
+                            b.severity,
+                            a.state,
+                            a.message,
+                            COALESCE(a."timestamp"::timestamp with time zone, now()) AS "timestamp",
+                                CASE
+                                    WHEN a.state IS NULL THEN 0
+                                    WHEN a.state::text = 'ok'::text THEN 0
+                                    WHEN a.state::text = 'alerting'::text THEN
+                                    CASE
+WHEN b.severity::text = 'Non-Critical'::text THEN 2
+ELSE 3
+                                    END
+                                    ELSE 1
+                                END AS health
+                           FROM pltf_stat_xref b
+                             LEFT JOIN pltf_stat_det a ON a.alert::text = b.alert::text) a1
+                  WHERE a1."timestamp" > ('now'::text::date - '3 days'::interval)) pltf
+          WHERE pltf.rank_id = 1) ot
+  GROUP BY ot.platform;

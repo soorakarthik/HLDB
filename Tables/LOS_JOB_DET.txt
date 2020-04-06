@@ -1,0 +1,26 @@
+-- Drop table
+
+-- DROP TABLE los.los_job_det
+
+CREATE TABLE los.los_job_det (
+	prtf_n varchar(50) NOT NULL,
+	aplt_n varchar(200) NOT NULL,
+	job_n varchar(200) NOT NULL,
+	node_i varchar(20) NULL,
+	job_freq_n varchar(20) NOT NULL,
+	job_ord_day_n varchar(20) NOT NULL,
+	job_los_day_n varchar(20) NOT NULL,
+	job_los_day_q int2 NULL,
+	job_cmpl_hr_i int2 NULL,
+	job_mtrc_ct_q int2 NULL,
+	job_mtrc_c bpchar(1) NOT NULL,
+	eff_d date NULL,
+	expr_d date NULL,
+	actv_f bpchar(1) NULL DEFAULT 'N'::bpchar,
+	job_los_hr_t varchar(15) NULL,
+	mstr_end_job_f bpchar(1) NULL DEFAULT 'N'::bpchar,
+	job_desc_t varchar(150) NULL
+)
+WITH (
+	OIDS=FALSE
+) ;

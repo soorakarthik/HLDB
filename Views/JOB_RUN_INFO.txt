@@ -1,0 +1,39 @@
+CREATE OR REPLACE VIEW los.job_run_info AS
+ SELECT ovr.eventuuid,
+    ovr.platform,
+    ovr.source_name,
+    ovr.job_name AS job_n,
+    ovr.job_type,
+    ovr.job_owner,
+    ovr.job_creator,
+    ovr.eventtimestamp,
+    ovr.eventstart AS strt_ti,
+    ovr.eventend AS end_ti,
+    ovr.pg_timestamp,
+    ovr.order_date AS ord_d,
+    ovr.status
+   FROM ( SELECT a.platform,
+            a.source_name,
+            a.job_name,
+            a.job_type,
+            a.job_owner,
+            a.job_creator,
+            a.objectuuid,
+            timezone('US/Central'::text, timezone('utc'::text, b.eventtimestamp)) AS eventtimestamp,
+            timezone('US/Central'::text, timezone('utc'::text, b.eventstart)) AS eventstart,
+            timezone('US/Central'::text, timezone('utc'::text, b.eventend)) AS eventend,
+            b.status,
+            b.eventuuid,
+            b.pg_timestamp,
+                CASE
+                    WHEN (b.meta ->> 'order_date'::text) IS NOT NULL THEN to_date(b.meta ->> 'order_date'::text, 'YYYY-MM-DD'::text)
+                    WHEN (b.meta ->> 'periodEnd'::text) IS NOT NULL THEN to_date(b.meta ->> 'periodEnd'::text, 'DD-MM-YYYY'::text)
+                    ELSE to_date(to_char(timezone('US/Central'::text, timezone('utc'::text, b.eventstart)), 'DD-MM-YYYY'::text), 'DD-MM-YYYY'::text)
+                END AS order_date
+           FROM los.dataportal_job_metadata_land a
+             JOIN los.dataportal_job_events_dedupe b ON a.objectuuid = b.objectuuid) ovr
+  WHERE ovr.order_date >= (( SELECT cal_date_dim.prev_acct_yr_beg_d
+           FROM los.cal_date_dim
+          WHERE cal_date_dim.greg_d = 'now'::text::date)) AND ovr.order_date <= (( SELECT cal_date_dim.acct_yr_end_d
+           FROM los.cal_date_dim
+          WHERE cal_date_dim.greg_d = 'now'::text::date));

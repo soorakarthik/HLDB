@@ -1,0 +1,14 @@
+-- Drop table
+
+-- DROP TABLE public.pltf_stat_xref
+
+CREATE TABLE public.pltf_stat_xref (
+	platform varchar(80) NULL,
+	alert varchar(100) NULL,
+	severity varchar(80) NULL,
+	actv_f bpchar(1) NULL DEFAULT 'Y'::bpchar,
+	expr_d date NULL DEFAULT '9999-12-31'::date
+)
+WITH (
+	OIDS=FALSE
+) ;

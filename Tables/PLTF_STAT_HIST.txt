@@ -1,0 +1,13 @@
+-- Drop table
+
+-- DROP TABLE public.pltf_stat_hist
+
+CREATE TABLE public.pltf_stat_hist (
+	platform varchar(50) NULL,
+	health_ts timestamp NULL DEFAULT now(),
+	health_status int4 NULL,
+	health_color varchar(15) NULL
+)
+WITH (
+	OIDS=FALSE
+) ;

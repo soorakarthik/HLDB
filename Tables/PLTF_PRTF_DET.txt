@@ -1,0 +1,22 @@
+-- Drop table
+
+-- DROP TABLE public.pltf_prtf_det
+
+CREATE TABLE public.pltf_prtf_det (
+	entity_name varchar(50) NULL,
+	object_flag varchar(5) NULL,
+	contact text NULL,
+	hist_link text NULL,
+	hipchat_link text NULL,
+	dashboard_link text NULL,
+	hipchat_label text NULL,
+	detailed_dashboard_label text NULL,
+	dq_link text NULL,
+	lag_det_link text NULL,
+	lag_det_label text NULL,
+	lag_det_f bpchar(1) NULL,
+	actv_f bpchar(1) NULL DEFAULT 'Y'::bpchar
+)
+WITH (
+	OIDS=FALSE
+) ;

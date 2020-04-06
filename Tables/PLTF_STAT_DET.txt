@@ -1,0 +1,14 @@
+-- Drop table
+
+-- DROP TABLE public.pltf_stat_det
+
+CREATE TABLE public.pltf_stat_det (
+	alert varchar(100) NULL,
+	state varchar(80) NULL,
+	link text NULL,
+	message text NULL,
+	"timestamp" timestamp NULL DEFAULT now()
+)
+WITH (
+	OIDS=FALSE
+) ;
