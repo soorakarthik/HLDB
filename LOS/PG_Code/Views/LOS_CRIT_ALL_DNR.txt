@@ -1,0 +1,15 @@
+CREATE OR REPLACE VIEW los.los_crit_all_dnr AS
+ SELECT los_crit_job_det_all_rpt.pyrm_n,
+    los_crit_job_det_all_rpt.rpt_n,
+    los_crit_job_det_all_rpt.rpt_d,
+    los_crit_job_det_all_rpt.wk_end_d,
+    los_crit_job_det_all_rpt.job_freq_n,
+    los_crit_job_det_all_rpt.job_los_day_n,
+    los_crit_job_det_all_rpt.rpt_orig,
+    los_crit_job_det_all_rpt.rpt_tier,
+    sum(los_crit_job_det_all_rpt.mtrc_ct_q) AS tot_mtrc_ct_q
+   FROM los.los_crit_job_det_all_rpt
+  WHERE los_crit_job_det_all_rpt.greg_d = los_crit_job_det_all_rpt.ord_d AND los_crit_job_det_all_rpt.src_f::text <> 'Default'::text AND los_crit_job_det_all_rpt.wk_end_d >= los_crit_job_det_all_rpt.eff_d AND los_crit_job_det_all_rpt.wk_end_d <= los_crit_job_det_all_rpt.expr_d AND los_crit_job_det_all_rpt.wk_end_d >= (( SELECT cal_date_dim.acct_yr_beg_d
+           FROM los.cal_date_dim
+          WHERE cal_date_dim.greg_d = 'now'::text::date)) AND los_crit_job_det_all_rpt.wk_end_d <= 'now'::text::date
+  GROUP BY los_crit_job_det_all_rpt.pyrm_n, los_crit_job_det_all_rpt.rpt_n, los_crit_job_det_all_rpt.rpt_d, los_crit_job_det_all_rpt.wk_end_d, los_crit_job_det_all_rpt.job_freq_n, los_crit_job_det_all_rpt.job_los_day_n, los_crit_job_det_all_rpt.rpt_orig, los_crit_job_det_all_rpt.rpt_tier;

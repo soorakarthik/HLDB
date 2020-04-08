@@ -1,0 +1,16 @@
+-- Drop table
+
+-- DROP TABLE los.los_crit_non_dw_run_info
+
+CREATE TABLE los.los_crit_non_dw_run_info (
+	pyrm_n varchar(50) NULL,
+	rpt_n varchar(100) NULL,
+	crit_mtrc_n varchar(100) NULL,
+	job_freq_n varchar(20) NULL,
+	met_ct_q int2 NULL,
+	rpt_d date NULL,
+	wk_end_d date NULL
+)
+WITH (
+	OIDS=FALSE
+) ;

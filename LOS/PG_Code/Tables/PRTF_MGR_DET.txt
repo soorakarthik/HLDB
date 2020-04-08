@@ -1,0 +1,11 @@
+-- Drop table
+
+-- DROP TABLE los.prtf_mgr_det
+
+CREATE TABLE los.prtf_mgr_det (
+	prtf_n varchar(50) NULL,
+	prtf_mgr varchar(100) NULL
+)
+WITH (
+	OIDS=FALSE
+) ;

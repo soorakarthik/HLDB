@@ -1,0 +1,61 @@
+CREATE OR REPLACE VIEW los.los_crit_lst_wk_los AS
+ SELECT dnr.pyrm_n,
+    dnr.rpt_n,
+    dnr.rpt_d,
+    dnr.wk_end_d,
+    dnr.job_freq_n,
+    dnr.job_los_day_n,
+    dnr.rpt_orig,
+    dnr.rpt_tier,
+    sum(nr.job_met_count) AS job_cnt_nr,
+    sum(dnr.tot_mtrc_ct_q) AS job_cnt_dnr,
+        CASE
+            WHEN dnr.rpt_n::text = ANY (ARRAY['Cut Sheets'::character varying, 'Departure Log'::character varying]::text[]) THEN COALESCE(round(100::numeric * COALESCE(sum(nr.job_met_count), 0::numeric) / sum(dnr.tot_mtrc_ct_q)::numeric(10,4), 2), 0::numeric)
+            ELSE
+            CASE
+                WHEN COALESCE(sum(nr.job_met_count), 0::numeric) < sum(dnr.tot_mtrc_ct_q) THEN 0
+                ELSE 100
+            END::numeric
+        END::numeric(10,2) AS los_pct
+   FROM ( SELECT los_crit_all_dnr.pyrm_n,
+            los_crit_all_dnr.rpt_n,
+            los_crit_all_dnr.rpt_d,
+            los_crit_all_dnr.wk_end_d,
+            los_crit_all_dnr.job_freq_n,
+            los_crit_all_dnr.job_los_day_n,
+            los_crit_all_dnr.rpt_orig,
+            los_crit_all_dnr.rpt_tier,
+            los_crit_all_dnr.tot_mtrc_ct_q
+           FROM los.los_crit_all_dnr) dnr
+     LEFT JOIN ( SELECT los_crit_all_nr.pyrm_n,
+            los_crit_all_nr.rpt_n,
+            los_crit_all_nr.rpt_d,
+            los_crit_all_nr.rpt_wk_end_d,
+            los_crit_all_nr.job_freq_n,
+            los_crit_all_nr.job_los_day_n,
+            los_crit_all_nr.rpt_orig,
+            los_crit_all_nr.rpt_tier,
+            los_crit_all_nr.job_met_count
+           FROM los.los_crit_all_nr) nr ON lower(btrim(dnr.pyrm_n::text)) = lower(btrim(nr.pyrm_n::text)) AND lower(btrim(dnr.rpt_n::text)) = lower(btrim(nr.rpt_n::text)) AND dnr.rpt_d = nr.rpt_d AND dnr.wk_end_d::date = nr.rpt_wk_end_d
+  GROUP BY dnr.pyrm_n, dnr.rpt_n, dnr.rpt_d, dnr.wk_end_d, dnr.job_freq_n, dnr.job_los_day_n, dnr.rpt_orig, dnr.rpt_tier
+UNION ALL
+ SELECT a.pyrm_n,
+    a.rpt_n,
+    b.rpt_d,
+    b.wk_end_d,
+    a.job_freq_n,
+    a.job_los_day_n,
+    a.rpt_orig,
+    a.rpt_tier,
+    sum(b.met_ct_q) AS job_cnt_nr,
+    sum(a.mtrc_ct_q) AS job_cnt_dnr,
+        CASE
+            WHEN sum(b.met_ct_q) < sum(a.mtrc_ct_q) THEN 0
+            ELSE 100
+        END::numeric(6,2) AS los_pct
+   FROM los.los_crit_job_det_all a
+     JOIN los.los_crit_non_dw_run_info b ON lower(btrim(a.pyrm_n::text)) = lower(btrim(b.pyrm_n::text)) AND lower(btrim(a.rpt_n::text)) = lower(btrim(b.rpt_n::text))
+  WHERE a.src_f::text = 'Default'::text AND b.wk_end_d >= a.eff_d AND b.wk_end_d <= a.expr_d AND b.wk_end_d >= (( SELECT cal_date_dim.acct_yr_beg_d
+           FROM los.cal_date_dim
+          WHERE cal_date_dim.greg_d = 'now'::text::date)) AND b.wk_end_d <= 'now'::text::date
+  GROUP BY a.pyrm_n, a.rpt_n, b.rpt_d, b.wk_end_d, a.job_freq_n, a.job_los_day_n, a.rpt_orig, a.rpt_tier;

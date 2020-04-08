@@ -1,0 +1,19 @@
+-- Drop table
+
+-- DROP TABLE los.los_crit_rpt_mdat
+
+CREATE TABLE los.los_crit_rpt_mdat (
+	pyrm_n varchar(50) NOT NULL,
+	rpt_n varchar(100) NOT NULL,
+	prod_owner varchar(100) NOT NULL,
+	rpt_orig varchar(20) NOT NULL,
+	rpt_tier varchar(10) NULL,
+	rpt_freq varchar(20) NULL,
+	dq_scr_freq varchar(20) NULL,
+	actv_f bpchar(1) NOT NULL,
+	eff_d date NULL,
+	expr_d date NULL
+)
+WITH (
+	OIDS=FALSE
+) ;

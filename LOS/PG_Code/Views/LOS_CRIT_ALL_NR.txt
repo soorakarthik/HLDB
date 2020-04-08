@@ -1,0 +1,34 @@
+CREATE OR REPLACE VIEW los.los_crit_all_nr AS
+ SELECT inr.pyrm_n,
+    inr.rpt_n,
+    inr.rpt_d,
+    inr.rpt_wk_end_d,
+    inr.job_freq_n,
+    inr.job_los_day_n,
+    inr.rpt_orig,
+    inr.rpt_tier,
+    sum(inr.job_mtrc_ct_q) AS job_met_count
+   FROM ( SELECT DISTINCT b.prtf_n AS pyrm_n,
+            b.aplt_n AS rpt_n,
+            a.job_n,
+            a.job_freq_n,
+            a.job_los_day_n,
+            a.ord_d AS job_ord_d,
+            a.rpt_d,
+            a.wk_end_d::date AS rpt_wk_end_d,
+                CASE
+                    WHEN b.los_status::text = 'MET'::text THEN b.job_mtrc_ct_q
+                    ELSE 0
+                END AS job_mtrc_ct_q,
+            b.job_start_time,
+            b.job_end_time,
+            a.rpt_orig,
+            a.rpt_tier,
+            b.los_status,
+            b.category
+           FROM los.los_crit_job_det_all_rpt a
+             JOIN los.dly_job_det b ON lower(btrim(a.pyrm_n::text)) = lower(btrim(b.prtf_n::text)) AND lower(btrim(a.rpt_n::text)) = lower(btrim(b.aplt_n::text)) AND lower(btrim(a.job_n::text)) = lower(btrim(b.job_n::text)) AND a.greg_d = b.job_ord_d AND a.ord_d = b.job_ord_d
+          WHERE b.category::text = 'Critical Report'::text AND b.wk_end_d < 'now'::text::date AND b.wk_end_d > (( SELECT cal_date_dim.acct_yr_beg_d
+                   FROM los.cal_date_dim
+                  WHERE cal_date_dim.greg_d = 'now'::text::date))) inr
+  GROUP BY inr.pyrm_n, inr.rpt_n, inr.rpt_d, inr.rpt_wk_end_d, inr.job_freq_n, inr.job_los_day_n, inr.rpt_orig, inr.rpt_tier;

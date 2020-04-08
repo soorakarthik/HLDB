@@ -1,0 +1,59 @@
+CREATE OR REPLACE VIEW los.los_crit_pyrm_pct AS
+ SELECT a.pyrm_n,
+    a.rpt_wk_end_d,
+    a.rpt_tier,
+    sum(a.mtrc_los_pct_nr)::numeric(8,4) AS pyrm_los_nr,
+    sum(a.mtrc_los_pct_dr)::numeric(8,4) AS pyrm_los_dnr,
+    COALESCE(round(100::numeric * (sum(a.mtrc_los_pct_nr)::numeric(8,4) / sum(a.mtrc_los_pct_dr)::numeric(8,4)), 2), 0::numeric) AS pyrm_los_pct
+   FROM ( SELECT los_crit_rpt_pct.pyrm_n,
+            los_crit_rpt_pct.rpt_n,
+            los_crit_rpt_pct.rpt_wk_end_d,
+            los_crit_rpt_pct.wkly_rpt_nr,
+            los_crit_rpt_pct.wkly_rpt_dnr,
+            los_crit_rpt_pct.wkly_los_pct,
+            los_crit_rpt_pct.rpt_orig,
+            los_crit_rpt_pct.rpt_tier,
+            los_crit_rpt_pct.job_freq_n,
+            los_crit_rpt_pct.job_los_day_n,
+                CASE
+                    WHEN los_crit_rpt_pct.job_freq_n::text = ANY (ARRAY['Weekly'::character varying, 'Monthly'::character varying]::text[]) THEN
+                    CASE
+                        WHEN los_crit_rpt_pct.wkly_los_pct = 100::numeric THEN 1
+                        ELSE 0
+                    END::numeric
+                    WHEN los_crit_rpt_pct.job_freq_n::text <> ALL (ARRAY['Weekly'::character varying, 'Monthly'::character varying]::text[]) THEN los_crit_rpt_pct.wkly_rpt_nr
+                    ELSE NULL::numeric
+                END AS mtrc_los_pct_nr,
+                CASE
+                    WHEN los_crit_rpt_pct.job_freq_n::text = ANY (ARRAY['Weekly'::character varying, 'Monthly'::character varying]::text[]) THEN 1::numeric
+                    WHEN los_crit_rpt_pct.job_freq_n::text <> ALL (ARRAY['Weekly'::character varying, 'Monthly'::character varying]::text[]) THEN los_crit_rpt_pct.wkly_rpt_dnr
+                    ELSE NULL::numeric
+                END AS mtrc_los_pct_dr
+           FROM los.los_crit_rpt_pct
+        UNION ALL
+         SELECT los_crit_rpt_pct.pyrm_n,
+            los_crit_rpt_pct.rpt_n,
+            los_crit_rpt_pct.rpt_wk_end_d,
+            los_crit_rpt_pct.wkly_rpt_nr,
+            los_crit_rpt_pct.wkly_rpt_dnr,
+            los_crit_rpt_pct.wkly_los_pct,
+            los_crit_rpt_pct.rpt_orig,
+            NULL::character(1) AS rpt_tier,
+            los_crit_rpt_pct.job_freq_n,
+            los_crit_rpt_pct.job_los_day_n,
+                CASE
+                    WHEN los_crit_rpt_pct.job_freq_n::text = ANY (ARRAY['Weekly'::character varying, 'Monthly'::character varying]::text[]) THEN
+                    CASE
+                        WHEN los_crit_rpt_pct.wkly_los_pct = 100::numeric THEN 1
+                        ELSE 0
+                    END::numeric
+                    WHEN los_crit_rpt_pct.job_freq_n::text <> ALL (ARRAY['Weekly'::character varying, 'Monthly'::character varying]::text[]) THEN los_crit_rpt_pct.wkly_rpt_nr
+                    ELSE NULL::numeric
+                END AS mtrc_los_pct_nr,
+                CASE
+                    WHEN los_crit_rpt_pct.job_freq_n::text = ANY (ARRAY['Weekly'::character varying, 'Monthly'::character varying]::text[]) THEN 1::numeric
+                    WHEN los_crit_rpt_pct.job_freq_n::text <> ALL (ARRAY['Weekly'::character varying, 'Monthly'::character varying]::text[]) THEN los_crit_rpt_pct.wkly_rpt_dnr
+                    ELSE NULL::numeric
+                END AS mtrc_los_pct_dr
+           FROM los.los_crit_rpt_pct) a
+  GROUP BY a.pyrm_n, a.rpt_wk_end_d, a.rpt_tier;

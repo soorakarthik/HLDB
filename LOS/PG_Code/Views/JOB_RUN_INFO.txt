@@ -1,0 +1,65 @@
+CREATE OR REPLACE VIEW los.job_run_info AS
+ SELECT ovr.eventuuid,
+    ovr.platform,
+    ovr.source_name,
+    ovr.job_name AS job_n,
+    ovr.job_type,
+    ovr.job_owner,
+    ovr.job_creator,
+    ovr.eventtimestamp,
+    ovr.eventstart AS strt_ti,
+    ovr.eventend AS end_ti,
+    ovr.pg_timestamp,
+    ovr.order_date AS ord_d,
+    ovr.status
+   FROM ( SELECT a.platform,
+            a.source_name,
+            a.job_name,
+            a.job_type,
+            a.job_owner,
+            a.job_creator,
+            a.objectuuid,
+            timezone('US/Central'::text, timezone('utc'::text, b.eventtimestamp)) AS eventtimestamp,
+            timezone('US/Central'::text, timezone('utc'::text, b.eventstart)) AS eventstart,
+            timezone('US/Central'::text, timezone('utc'::text, b.eventend)) AS eventend,
+            b.status,
+            b.eventuuid,
+            b.pg_timestamp,
+                CASE
+                    WHEN a.platform not in ('control-m'::text, 'datastream'::text) THEN to_date(to_char(timezone('US/Central'::text, timezone('utc'::text, b.eventend)), 'DD-MM-YYYY'::text), 'DD-MM-YYYY'::text)
+                    WHEN a.platform in ('control-m'::text, 'datastream'::text) THEN
+                    CASE
+                        WHEN b.date_of_data IS NOT NULL THEN b.date_of_data::date
+                        ELSE
+                        CASE
+                            WHEN (b.meta ->> 'order_date'::text) IS NOT NULL THEN to_date(b.meta ->> 'order_date'::text, 'YYYY-MM-DD'::text)
+                            WHEN (b.meta ->> 'periodEnd'::text) IS NOT NULL THEN to_date(b.meta ->> 'periodEnd'::text, 'DD-MM-YYYY'::text)
+                            ELSE to_date(to_char(timezone('US/Central'::text, timezone('utc'::text, b.eventend)), 'DD-MM-YYYY'::text), 'DD-MM-YYYY'::text)
+                        END
+                    END
+                END AS order_date
+           FROM los.dataportal_job_metadata_land a
+             JOIN los.dataportal_job_events_dedupe b ON a.objectuuid = b.objectuuid) ovr
+  WHERE ovr.order_date >= (( SELECT cal_date_dim.prev_acct_yr_beg_d
+           FROM los.cal_date_dim
+          WHERE cal_date_dim.greg_d = 'now'::text::date)) AND ovr.order_date <= (( SELECT cal_date_dim.acct_yr_end_d
+           FROM los.cal_date_dim
+          WHERE cal_date_dim.greg_d = 'now'::text::date))
+UNION ALL
+ SELECT ssis_job_run_info.job_id AS eventuuid,
+    'SSIS/SSAS'::text AS platform,
+    'SSIS'::text AS source_name,
+    ssis_job_run_info.job_n,
+    'SSIS/SSAS'::text AS job_type,
+    'SSIS'::text AS job_owner,
+    'SSIS'::text AS job_creator,
+    ssis_job_run_info.strt_ti AS eventtimestamp,
+    ssis_job_run_info.strt_ti,
+    ssis_job_run_info.end_ti,
+    now()::timestamp without time zone AS pg_timestamp,
+    ssis_job_run_info.ord_d,
+    ssis_job_run_info.stat_msg AS status
+   FROM los.ssis_job_run_info
+  WHERE ssis_job_run_info.ord_d >= (( SELECT cal_date_dim.prev_acct_yr_beg_d
+           FROM los.cal_date_dim
+          WHERE cal_date_dim.greg_d = 'now'::text::date));

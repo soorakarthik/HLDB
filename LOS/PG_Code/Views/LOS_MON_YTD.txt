@@ -1,0 +1,25 @@
+CREATE OR REPLACE VIEW los.los_mon_ytd AS
+ SELECT a.prtf_n,
+    sum(a.job_met_count) AS tot_job_met_cnt,
+    sum(a.los_cnt) AS tot_los_cnt,
+    COALESCE(round(100::numeric * sum(a.job_met_count) / sum(a.los_cnt)::numeric(10,2), 2), 0::numeric) AS los_pct
+   FROM ( SELECT DISTINCT a_1.prtf_n,
+            a_1.aplt_n,
+            COALESCE(b.rpt_wk_end_d, a_1.acct_wk_end_d) AS rpt_wk_end_d,
+            COALESCE(b.job_met_count, 0::bigint) AS job_met_count,
+            a_1.aplt_mon_mtrc_q AS los_cnt,
+            COALESCE(round((100 * b.job_met_count)::numeric / a_1.aplt_mon_mtrc_q::numeric(10,2), 2), 0::numeric) AS los_pct
+           FROM los.los_mon_ytd_denr a_1
+             LEFT JOIN los.los_mon_ytd_numr b ON a_1.prtf_n::text = b.prtf_n::text AND a_1.aplt_n::text = b.aplt_n::text AND b.rpt_wk_end_d >= a_1.eff_d AND b.rpt_wk_end_d <= a_1.expr_d AND b.rpt_wk_end_d = a_1.acct_wk_end_d AND b.rpt_wk_end_d < 'now'::text::date
+          WHERE COALESCE(b.rpt_wk_end_d, a_1.acct_wk_end_d) >= a_1.eff_d AND COALESCE(b.rpt_wk_end_d, a_1.acct_wk_end_d) <= a_1.expr_d
+        UNION ALL
+         SELECT DISTINCT 'Overall'::character varying(10) AS prtf_n,
+            a_1.aplt_n,
+            COALESCE(b.rpt_wk_end_d, a_1.acct_wk_end_d) AS rpt_wk_end_d,
+            COALESCE(b.job_met_count, 0::bigint) AS job_met_count,
+            a_1.aplt_mon_mtrc_q AS los_cnt,
+            COALESCE(round((100 * b.job_met_count)::numeric / a_1.aplt_mon_mtrc_q::numeric(10,2), 2), 0::numeric) AS los_pct
+           FROM los.los_mon_ytd_denr a_1
+             LEFT JOIN los.los_mon_ytd_numr b ON a_1.prtf_n::text = b.prtf_n::text AND a_1.aplt_n::text = b.aplt_n::text AND b.rpt_wk_end_d >= a_1.eff_d AND b.rpt_wk_end_d <= a_1.expr_d AND b.rpt_wk_end_d = a_1.acct_wk_end_d AND b.rpt_wk_end_d < 'now'::text::date
+          WHERE COALESCE(b.rpt_wk_end_d, a_1.acct_wk_end_d) >= a_1.eff_d AND COALESCE(b.rpt_wk_end_d, a_1.acct_wk_end_d) <= a_1.expr_d) a
+  GROUP BY a.prtf_n;

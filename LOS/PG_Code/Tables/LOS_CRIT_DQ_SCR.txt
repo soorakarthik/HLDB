@@ -1,0 +1,17 @@
+-- Drop table
+
+-- DROP TABLE los.los_crit_dq_scr
+
+CREATE TABLE los.los_crit_dq_scr (
+	pyrm_n varchar(50) NOT NULL,
+	rpt_n varchar(100) NOT NULL,
+	job_freq_n varchar(20) NULL,
+	dq_scr int2 NULL,
+	rpt_d date NOT NULL,
+	wk_end_d date NOT NULL,
+	comments varchar(10000) NULL,
+	CONSTRAINT los_crit_dq_scr_pkey PRIMARY KEY (rpt_n, rpt_d)
+)
+WITH (
+	OIDS=FALSE
+) ;

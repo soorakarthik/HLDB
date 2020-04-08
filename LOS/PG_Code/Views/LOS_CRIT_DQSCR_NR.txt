@@ -1,0 +1,11 @@
+CREATE OR REPLACE VIEW los.los_crit_dqscr_nr AS
+ SELECT los_crit_dq_scr.pyrm_n,
+    los_crit_dq_scr.rpt_n,
+    los_crit_dq_scr.job_freq_n,
+    sum(los_crit_dq_scr.dq_scr) AS wk_dq_scr,
+    los_crit_dq_scr.wk_end_d
+   FROM los.los_crit_dq_scr
+  WHERE los_crit_dq_scr.wk_end_d >= (( SELECT cal_date_dim.acct_yr_beg_d
+           FROM los.cal_date_dim
+          WHERE cal_date_dim.greg_d = 'now'::text::date)) AND los_crit_dq_scr.wk_end_d <= 'now'::text::date
+  GROUP BY los_crit_dq_scr.pyrm_n, los_crit_dq_scr.rpt_n, los_crit_dq_scr.job_freq_n, los_crit_dq_scr.wk_end_d;

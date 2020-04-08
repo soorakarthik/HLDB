@@ -1,0 +1,19 @@
+CREATE OR REPLACE VIEW los.los_crit_dqscr_dr AS
+ SELECT DISTINCT a.pyrm_n,
+    a.rpt_n,
+    b.dq_scr_freq,
+        CASE
+            WHEN (a.rpt_n::text = ANY (ARRAY['Monthly HQ CCO'::character varying, 'myPerformance Desktop: Monthly P&L'::character varying, 'Card access - 30 Days No Scan'::character varying]::text[])) AND c.acct_mo_wk_i <> 1 THEN 0
+            ELSE a.tot_dq_scr::integer
+        END AS calc_tot_dq_scr,
+    c.acct_mo_wk_n,
+    c.acct_wk_end_d,
+    a.eff_d,
+    a.expr_d,
+    a.actv_f
+   FROM los.crit_los_tot_dq_scr a
+     JOIN los.los_crit_rpt_mdat b ON lower(btrim(a.pyrm_n::text)) = lower(btrim(b.pyrm_n::text)) AND lower(btrim(a.rpt_n::text)) = lower(btrim(b.rpt_n::text))
+     JOIN los.cal_date_dim c ON 1 = 1
+  WHERE c.acct_wk_end_d >= a.eff_d AND c.acct_wk_end_d <= a.expr_d AND c.acct_wk_end_d >= (( SELECT cal_date_dim.acct_yr_beg_d
+           FROM los.cal_date_dim
+          WHERE cal_date_dim.greg_d = 'now'::text::date)) AND c.acct_wk_end_d <= 'now'::text::date AND c.acct_wk_end_d < 'now'::text::date;

@@ -1,0 +1,19 @@
+-- Drop table
+
+-- DROP TABLE los.los_job_dlay_incdt
+
+CREATE TABLE los.los_job_dlay_incdt (
+	prtf_n varchar(30) NOT NULL,
+	aplt_n varchar(200) NOT NULL,
+	job_ord_d date NULL,
+	rpt_d date NULL,
+	job_n varchar(200) NOT NULL,
+	evnt_t varchar(20) NULL,
+	incdt_t varchar(20) NULL,
+	dlay_root_caus_t varchar(50) NULL,
+	dlay_desc_t varchar(2000) NULL,
+	incdt_stat varchar(20) NULL
+)
+WITH (
+	OIDS=FALSE
+) ;

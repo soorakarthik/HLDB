@@ -1,0 +1,78 @@
+CREATE OR REPLACE VIEW los.los_crit_wkly_rpt AS
+ SELECT a.pyrm_n,
+    a.rpt_n,
+    a.crit_mtrc_n,
+    a.job_freq_n,
+    a.job_los_day_n,
+    a.rpt_wk_end_d,
+    a.job_met_count,
+    a.los_cnt,
+    a.los_pct,
+    a.rpt_orig,
+    a.rpt_tier
+   FROM ( SELECT DISTINCT a_1.pyrm_n,
+            a_1.rpt_n,
+            a_1.crit_mtrc_n,
+            a_1.job_freq_n,
+            a_1.job_los_day_n,
+            COALESCE(b.rpt_wk_end_d, a_1.acct_wk_end_d::timestamp without time zone) AS rpt_wk_end_d,
+            COALESCE(b.job_met_count, 0::bigint) AS job_met_count,
+            a_1.mtrc_ct_q AS los_cnt,
+                CASE
+                    WHEN a_1.job_freq_n::text = 'Intraday'::text THEN 100.0
+                    ELSE COALESCE(round((100 * b.job_met_count)::numeric / a_1.mtrc_ct_q::numeric(10,2), 2), 0::numeric)
+                END AS los_pct,
+            b.rpt_orig,
+            b.rpt_tier
+           FROM los.los_crit_rpt_det_ct a_1
+             LEFT JOIN los.los_crit_wkly_mtrc_ct b ON a_1.pyrm_n::text = b.pyrm_n::text AND a_1.rpt_n::text = b.rpt_n::text AND a_1.crit_mtrc_n::text = b.crit_mtrc_n::text AND b.rpt_wk_end_d >= a_1.eff_d AND b.rpt_wk_end_d <= a_1.expr_d AND b.rpt_wk_end_d = a_1.acct_wk_end_d AND b.rpt_wk_end_d < 'now'::text::date
+          WHERE COALESCE(b.rpt_wk_end_d, a_1.acct_wk_end_d::timestamp without time zone) >= a_1.eff_d AND COALESCE(b.rpt_wk_end_d, a_1.acct_wk_end_d::timestamp without time zone) <= a_1.expr_d
+        UNION ALL
+         SELECT a_1.pyrm_n,
+            a_1.rpt_n,
+            a_1.crit_mtrc_n,
+            a_1.job_freq_n,
+            a_1.job_los_day_n,
+            a_1.rpt_wk_end_d,
+            COALESCE(sum(a_1.job_met_count), 0::numeric) AS job_met_count,
+            sum(a_1.mtrc_ct_q) AS los_cnt,
+                CASE
+                    WHEN a_1.job_freq_n::text = 'Intraday'::text THEN 100.0
+                    ELSE COALESCE(round(100::numeric * (sum(a_1.job_met_count) / sum(a_1.mtrc_ct_q::numeric(10,4))), 2), 0::numeric)
+                END AS los_pct,
+            a_1.rpt_orig,
+            a_1.rpt_tier
+           FROM ( SELECT a_2.pyrm_n,
+                    a_2.rpt_n,
+                    NULL::character(1) AS crit_mtrc_n,
+                    a_2.job_freq_n,
+                    a_2.job_los_day_n,
+                    COALESCE(b.rpt_wk_end_d, a_2.acct_wk_end_d::timestamp without time zone) AS rpt_wk_end_d,
+                    COALESCE(b.job_met_count, 0::bigint) AS job_met_count,
+                    a_2.mtrc_ct_q,
+                    a_2.eff_d,
+                    a_2.expr_d,
+                    b.rpt_orig,
+                    b.rpt_tier
+                   FROM los.los_crit_rpt_det_ct a_2
+                     LEFT JOIN los.los_crit_wkly_mtrc_ct b ON a_2.pyrm_n::text = b.pyrm_n::text AND a_2.rpt_n::text = b.rpt_n::text AND a_2.crit_mtrc_n::text = b.crit_mtrc_n::text AND b.rpt_wk_end_d = a_2.acct_wk_end_d AND b.rpt_wk_end_d < 'now'::text::date
+                  WHERE COALESCE(b.rpt_wk_end_d, a_2.acct_wk_end_d::timestamp without time zone) >= a_2.eff_d AND COALESCE(b.rpt_wk_end_d, a_2.acct_wk_end_d::timestamp without time zone) <= a_2.expr_d AND a_2.mtrc_ct_q > 0) a_1
+          GROUP BY a_1.pyrm_n, a_1.rpt_n, a_1.crit_mtrc_n, a_1.job_freq_n, a_1.job_los_day_n, a_1.rpt_wk_end_d, a_1.rpt_orig, a_1.rpt_tier) a
+UNION ALL
+ SELECT a.pyrm_n,
+    a.rpt_n,
+    a.crit_mtrc_n,
+    a.job_freq_n,
+    a.job_los_day_n,
+    b.wk_end_d AS rpt_wk_end_d,
+    sum(b.met_ct_q) AS job_met_count,
+    sum(a.mtrc_ct_q) AS los_cnt,
+    COALESCE(round(100::numeric * (sum(b.met_ct_q)::numeric / sum(a.mtrc_ct_q::numeric(10,4))), 2), 0::numeric) AS los_pct,
+    a.rpt_orig,
+    a.rpt_tier
+   FROM los.los_crit_non_dw_det a
+     JOIN los.los_crit_non_dw_run_info b ON a.pyrm_n::text = b.pyrm_n::text AND a.rpt_n::text = b.rpt_n::text AND a.crit_mtrc_n::text = b.crit_mtrc_n::text
+  WHERE b.wk_end_d >= a.eff_d AND b.wk_end_d <= a.expr_d AND b.wk_end_d > (( SELECT cal_date_dim.acct_yr_beg_d
+           FROM los.cal_date_dim
+          WHERE cal_date_dim.greg_d = 'now'::text::date))
+  GROUP BY a.pyrm_n, a.rpt_n, a.crit_mtrc_n, a.job_freq_n, a.job_los_day_n, b.wk_end_d, a.rpt_orig, a.rpt_tier;

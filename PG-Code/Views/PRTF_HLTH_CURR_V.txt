@@ -1,0 +1,36 @@
+CREATE OR REPLACE VIEW public.prtf_hlth_curr_v AS
+ SELECT qry2.entity_name,
+    qry2.calc_health,
+        CASE
+            WHEN dq_qry.cal_ts::timestamp without time zone::date = 'now'::text::date THEN dq_qry.dq_status
+            ELSE NULL::text
+        END AS dq_status,
+        CASE
+            WHEN dq_qry.cal_ts::timestamp without time zone::date = 'now'::text::date THEN dq_qry.cal_ts
+            ELSE NULL::timestamp with time zone
+        END AS cal_ts
+   FROM ( SELECT md.entity_name,
+            qry1.health_status,
+            COALESCE(qry1.health_status, 1) AS calc_health,
+            COALESCE(qry1.pg_timestamp::timestamp with time zone, now()) AS cal_ts,
+            row_number() OVER (PARTITION BY md.entity_name ORDER BY (COALESCE(qry1.pg_timestamp::timestamp with time zone, now())) DESC) AS rank_id
+           FROM ( SELECT prtf_curr_stat.portfolio_name,
+                    prtf_curr_stat.health_status,
+                    prtf_curr_stat.pg_timestamp
+                   FROM prtf_curr_stat prtf_curr_stat
+                  WHERE prtf_curr_stat.pg_timestamp > (now() - '00:30:00'::interval)) qry1
+             RIGHT JOIN pltf_prtf_det md ON md.entity_name::text = qry1.portfolio_name::text
+          WHERE md.object_flag::text = 'PR'::text) qry2
+     LEFT JOIN ( SELECT md.entity_name,
+            dq.dq_status,
+            COALESCE(dq.pg_timestamp::timestamp with time zone, now()) AS cal_ts,
+                CASE
+                    WHEN dq.dq_status = 'PASS'::text THEN 3
+                    WHEN dq.dq_status = 'FAIL'::text THEN 0
+                    ELSE 1
+                END AS dq_calc_health,
+            row_number() OVER (PARTITION BY md.entity_name ORDER BY (COALESCE(dq.pg_timestamp::timestamp with time zone, now())) DESC) AS rank_id
+           FROM prtf_dq_stat dq
+             RIGHT JOIN pltf_prtf_det md ON md.entity_name::text = dq.portfolio_name::text
+          WHERE md.object_flag::text = 'PR'::text) dq_qry ON qry2.entity_name::text = dq_qry.entity_name::text
+  WHERE qry2.rank_id = 1 AND dq_qry.rank_id = 1;

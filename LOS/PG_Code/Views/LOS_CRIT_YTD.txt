@@ -1,0 +1,22 @@
+CREATE OR REPLACE VIEW los.los_crit_ytd AS
+ SELECT a.pyrm_n,
+    a.rpt_tier,
+    sum(a.pyrm_los_nr) AS pyrm_nr,
+    sum(a.pyrm_los_dnr) AS pyrm_dnr,
+    COALESCE(round(100::numeric * sum(a.pyrm_los_nr) / sum(a.pyrm_los_dnr)::numeric(10,4), 2), 0::numeric) AS pyrm_los_pct
+   FROM ( SELECT los_crit_pyrm_pct.pyrm_n,
+            los_crit_pyrm_pct.rpt_wk_end_d,
+            COALESCE(los_crit_pyrm_pct.rpt_tier, 'Overall'::character varying) AS rpt_tier,
+            los_crit_pyrm_pct.pyrm_los_nr,
+            los_crit_pyrm_pct.pyrm_los_dnr,
+            los_crit_pyrm_pct.pyrm_los_pct
+           FROM los.los_crit_pyrm_pct
+        UNION ALL
+         SELECT 'Overall'::character varying(10) AS pyrm_n,
+            los_crit_pyrm_pct.rpt_wk_end_d,
+            COALESCE(los_crit_pyrm_pct.rpt_tier, 'Overall'::character varying) AS rpt_tier,
+            los_crit_pyrm_pct.pyrm_los_nr,
+            los_crit_pyrm_pct.pyrm_los_dnr,
+            los_crit_pyrm_pct.pyrm_los_pct
+           FROM los.los_crit_pyrm_pct) a
+  GROUP BY a.pyrm_n, a.rpt_tier;

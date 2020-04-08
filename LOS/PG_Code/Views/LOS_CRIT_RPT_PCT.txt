@@ -1,0 +1,38 @@
+CREATE OR REPLACE VIEW los.los_crit_rpt_pct AS
+ SELECT inr.pyrm_n,
+    inr.rpt_n,
+    inr.job_freq_n,
+    inr.job_los_day_n,
+    inr.rpt_wk_end_d,
+    inr.rpt_orig,
+    inr.rpt_tier,
+        CASE
+            WHEN inr.rpt_n::text = ANY (ARRAY['Cut Sheets'::character varying, 'Departure Log'::character varying]::text[]) THEN sum(inr.tot_cnt_nr)
+            ELSE sum(inr.rpt_day_count_nr)::numeric
+        END AS wkly_rpt_nr,
+        CASE
+            WHEN inr.rpt_n::text = ANY (ARRAY['Cut Sheets'::character varying, 'Departure Log'::character varying]::text[]) THEN sum(inr.tot_cnt_dnr)
+            ELSE sum(1)::numeric(10,4)
+        END AS wkly_rpt_dnr,
+        CASE
+            WHEN inr.rpt_n::text = ANY (ARRAY['Cut Sheets'::character varying, 'Departure Log'::character varying]::text[]) THEN COALESCE(100::numeric * sum(inr.tot_cnt_nr) / sum(inr.tot_cnt_dnr), 0::numeric)::numeric(6,2)
+            ELSE COALESCE(round((100 * sum(inr.rpt_day_count_nr))::numeric / sum(1)::numeric(10,4), 2), 0::numeric)
+        END AS wkly_los_pct
+   FROM ( SELECT los_crit_lst_wk_los.pyrm_n,
+            los_crit_lst_wk_los.rpt_n,
+            los_crit_lst_wk_los.job_freq_n,
+            los_crit_lst_wk_los.job_los_day_n,
+            los_crit_lst_wk_los.rpt_d,
+            los_crit_lst_wk_los.wk_end_d::date AS rpt_wk_end_d,
+            los_crit_lst_wk_los.rpt_orig,
+            los_crit_lst_wk_los.rpt_tier,
+                CASE
+                    WHEN COALESCE(sum(los_crit_lst_wk_los.job_cnt_nr), 0::numeric) < sum(los_crit_lst_wk_los.job_cnt_dnr) THEN 0
+                    ELSE 1
+                END AS rpt_day_count_nr,
+            sum(los_crit_lst_wk_los.job_cnt_nr) AS tot_cnt_nr,
+            sum(los_crit_lst_wk_los.job_cnt_dnr) AS tot_cnt_dnr,
+            COALESCE(100::numeric * sum(los_crit_lst_wk_los.job_cnt_nr) / sum(los_crit_lst_wk_los.job_cnt_dnr), 0::numeric)::numeric(6,2) AS wkly_los_pct
+           FROM los.los_crit_lst_wk_los
+          GROUP BY los_crit_lst_wk_los.pyrm_n, los_crit_lst_wk_los.rpt_n, los_crit_lst_wk_los.job_freq_n, los_crit_lst_wk_los.job_los_day_n, los_crit_lst_wk_los.rpt_d, (los_crit_lst_wk_los.wk_end_d::date), los_crit_lst_wk_los.rpt_orig, los_crit_lst_wk_los.rpt_tier) inr
+  GROUP BY inr.pyrm_n, inr.rpt_n, inr.job_freq_n, inr.job_los_day_n, inr.rpt_wk_end_d, inr.rpt_orig, inr.rpt_tier;

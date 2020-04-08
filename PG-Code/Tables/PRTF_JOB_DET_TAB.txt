@@ -1,0 +1,23 @@
+-- Drop table
+
+-- DROP TABLE public.prtf_job_det_tab
+
+CREATE TABLE public.prtf_job_det_tab (
+	prtf_n text NOT NULL,
+	aplt_n text NOT NULL,
+	category text NULL,
+	job_n text NOT NULL,
+	job_freq_n varchar(20) NULL,
+	job_ord_d date NOT NULL,
+	rpt_d date NOT NULL,
+	job_status text NULL,
+	los_status text NULL,
+	job_start_time text NULL,
+	job_end_time text NULL,
+	sa_los_time timestamp NULL,
+	health_status int4 NULL,
+	CONSTRAINT pk_prtf_job_det_tab PRIMARY KEY (prtf_n, aplt_n, job_n, job_ord_d, rpt_d)
+)
+WITH (
+	OIDS=FALSE
+) ;

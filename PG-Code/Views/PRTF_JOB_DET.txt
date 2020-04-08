@@ -1,0 +1,83 @@
+CREATE OR REPLACE VIEW public.prtf_job_det AS
+ SELECT
+        CASE
+            WHEN d.aplt_n::text = 'Daily-Inventory'::text THEN 'Inventory'::character varying
+            WHEN d.aplt_n::text = 'Daily-Sales'::text THEN 'Sales (Demand/Fulfilled)'::character varying
+            WHEN d.prtf_n::text = 'HR-TMDW'::text THEN 'HRE'::character varying
+            WHEN d.prtf_n::text ~~ 'GSCL%'::text THEN 'GSCL Data Flow'::character varying
+            WHEN d.prtf_n::text = 'Distribution'::text THEN 'GSCL Data Flow'::character varying
+            ELSE d.prtf_n
+        END AS prtf_n,
+    d.aplt_n,
+    d.category,
+    d.job_n,
+    d.job_freq_n,
+    d.ord_d AS job_ord_d,
+    d.rpt_d,
+        CASE
+            WHEN (d.los_status = ANY (ARRAY['MET'::text, 'NOT-MET'::text])) OR d.status = 'COMPLETE'::text THEN 'COMPLETE'::text
+            WHEN (d.los_status <> ALL (ARRAY['MET'::text, 'NOT-MET'::text])) AND d.status = 'IN_PROGRESS'::text THEN 'IN_PROGRESS'::text
+            ELSE 'WAITING'::text
+        END AS job_status,
+        CASE
+            WHEN d.los_status = 'MET'::text THEN 'LOS_MET'::text
+            WHEN d.los_status = 'NOT-MET'::text THEN 'LOS_NOT_MET'::text
+            WHEN d.los_status = 'In Progress or Waiting'::text AND now() > d.los_time THEN 'LOS_NOT_MET'::text
+            WHEN (d.los_status <> ALL (ARRAY['MET'::text, 'NOT-MET'::text])) AND d.status = 'IN_PROGRESS'::text THEN 'IN_PROGRESS'::text
+            WHEN (d.los_status <> ALL (ARRAY['MET'::text, 'NOT-MET'::text])) AND d.status <> 'IN_PROGRESS'::text THEN 'WAITING'::text
+            ELSE NULL::text
+        END AS los_status,
+        CASE
+            WHEN d.start_time IS NULL THEN 'Job Not Triggered'::character varying
+            ELSE d.start_time
+        END AS job_start_time,
+        CASE
+            WHEN d.end_time IS NULL THEN 'Job Not Triggered'::character varying
+            ELSE d.end_time
+        END AS job_end_time,
+    d.los_time AS sa_los_time,
+        CASE
+            WHEN (d.status = ANY (ARRAY['COMPLETE'::text, 'SUCCESS'::text])) OR d.los_status = 'MET'::text THEN 0
+            WHEN (d.los_status <> ALL (ARRAY['MET'::text, 'NOT-MET'::text])) AND now() > d.los_time THEN 3
+            WHEN (d.los_status <> ALL (ARRAY['MET'::text, 'NOT-MET'::text])) AND now() <= d.los_time THEN 1
+            ELSE 5
+        END AS health_status
+   FROM ( SELECT a.prtf_n,
+            a.aplt_n,
+            a.job_n,
+            b.job_n AS job_mem_name,
+            a.job_freq_n,
+            a.ord_d,
+            a.rpt_d,
+            a.day_n,
+            a.rpt_day_n,
+            b.strt_ti::character varying(19) AS start_time,
+            b.end_ti::character varying(19) AS end_time,
+            a.wk_end_d,
+            COALESCE((b.ord_d + a.job_los_day_q::integer)::timestamp(0) without time zone + a.job_los_hr_t::interval hour to minute, (a.ord_d + a.job_los_day_q::integer)::timestamp(0) without time zone + a.job_los_hr_t::interval hour to minute) AS los_time,
+                CASE
+                    WHEN b.end_ti <= ((b.ord_d + a.job_los_day_q::integer)::timestamp(0) without time zone + a.job_los_hr_t::interval hour to minute) THEN 'MET'::text
+                    WHEN b.end_ti > ((b.ord_d + a.job_los_day_q::integer)::timestamp(0) without time zone + a.job_los_hr_t::interval hour to minute) THEN 'NOT-MET'::text
+                    ELSE 'In Progress or Waiting'::text
+                END AS los_status,
+            b.strt_ti,
+            b.end_ti,
+            b.status,
+            a.category
+           FROM hldb_mstr_job_det a
+             LEFT JOIN ( SELECT src.job_n,
+                    src.ord_d,
+                    src.strt_ti,
+                    src.status,
+                    src.end_ti
+                   FROM ( SELECT job_run_info.job_n,
+                            job_run_info.ord_d,
+                            job_run_info.strt_ti,
+                            job_run_info.status,
+                            job_run_info.end_ti,
+                            row_number() OVER (PARTITION BY job_run_info.job_n, job_run_info.ord_d ORDER BY job_run_info.strt_ti) AS rank_id
+                           FROM los.job_run_info
+                          WHERE job_run_info.ord_d >= ('now'::text::date - 5) AND (job_run_info.status = ANY (ARRAY['COMPLETE'::text, 'IN_PROGRESS'::text, 'SUCCESS'::text]))) src
+                  WHERE src.rank_id = 1) b ON lower(a.job_n::text) = b.job_n AND a.greg_d = b.ord_d AND a.ord_d = b.ord_d
+          WHERE a.actv_f = 'Y'::bpchar AND a.wk_end_d >= a.eff_d AND a.wk_end_d <= a.expr_d AND a.ord_d = a.greg_d AND a.rpt_d = 'now'::text::date) d
+  WHERE (d.aplt_n::text || d.rpt_day_n::text) <> ('VIP'::text || 'Sunday'::text) AND (d.job_n::text || d.day_n::text) <> ('sed37tic2295u'::text || 'Saturday'::text) AND (d.job_n::text || d.day_n::text) <> ('sed37tic2305u'::text || 'Saturday'::text) AND (d.job_n::text || d.day_n::text) <> ('sed37tic2310u'::text || 'Saturday'::text) AND (d.job_n::text || d.day_n::text) <> ('sed37tic2320u'::text || 'Saturday'::text) AND (d.job_n::text || d.day_n::text) <> ('sed37tic2390u'::text || 'Saturday'::text) AND (d.job_n::text || d.day_n::text) <> ('sed37tic2285u'::text || 'Saturday'::text) AND (d.job_n::text || d.day_n::text) <> ('sed37tic2385u'::text || 'Saturday'::text) AND (d.aplt_n::text || d.day_n::text) <> ('Business Review'::text || 'Saturday'::text) AND (d.aplt_n::text || d.day_n::text) <> ('Business Review'::text || 'Sunday'::text);

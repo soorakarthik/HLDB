@@ -1,0 +1,75 @@
+CREATE OR REPLACE VIEW los.los_non_mstr_job_det AS
+ SELECT inrq.prtf_n,
+    inrq.aplt_n,
+    inrq.job_n,
+    inrq.job_desc_t,
+    inrq.job_freq_n,
+    inrq.job_ord_day_n,
+    inrq.job_los_day_n,
+    inrq.job_los_day_q,
+    inrq.job_los_hr_t,
+    inrq.job_cmpl_hr_i,
+    inrq.job_mtrc_ct_q,
+    inrq.job_mtrc_c,
+    inrq.eff_d,
+    inrq.expr_d,
+    inrq.actv_f,
+    inrq.greg_d,
+    inrq.day_n,
+    date(inrq.ord_d) AS ord_d,
+    date(inrq.ord_d) + inrq.job_los_day_q::integer AS rpt_d,
+    date(inrq.wk_end_d) AS wk_end_d
+   FROM ( SELECT los_job_det.prtf_n,
+            los_job_det.aplt_n,
+            los_job_det.job_n,
+            los_job_det.job_desc_t,
+            los_job_det.job_freq_n,
+            los_job_det.job_ord_day_n,
+            los_job_det.job_los_day_n,
+            los_job_det.job_los_day_q,
+            los_job_det.job_los_hr_t,
+            los_job_det.job_cmpl_hr_i,
+            los_job_det.job_mtrc_ct_q,
+            los_job_det.job_mtrc_c,
+            los_job_det.eff_d,
+            los_job_det.expr_d,
+            los_job_det.actv_f,
+            b.greg_d,
+            b.day_n,
+                CASE
+                    WHEN los_job_det.job_freq_n::text = 'Weekly'::text AND los_job_det.job_ord_day_n::text = 'Sunday'::text THEN b.acct_wk_beg_d::timestamp without time zone
+                    WHEN los_job_det.job_freq_n::text = 'Weekly'::text AND los_job_det.job_ord_day_n::text = 'Monday'::text THEN b.acct_wk_beg_d + '1 day'::interval day
+                    WHEN los_job_det.job_freq_n::text = 'Weekly'::text AND los_job_det.job_ord_day_n::text = 'Tuesday'::text THEN b.acct_wk_beg_d + '2 days'::interval day
+                    WHEN los_job_det.job_freq_n::text = 'Weekly'::text AND los_job_det.job_ord_day_n::text = 'Wednesday'::text THEN b.acct_wk_beg_d + '3 days'::interval day
+                    WHEN los_job_det.job_freq_n::text = 'Weekly'::text AND los_job_det.job_ord_day_n::text = 'Thursday'::text THEN b.acct_wk_beg_d + '4 days'::interval day
+                    WHEN los_job_det.job_freq_n::text = 'Weekly'::text AND los_job_det.job_ord_day_n::text = 'Friday'::text THEN b.acct_wk_beg_d + '5 days'::interval day
+                    WHEN los_job_det.job_freq_n::text = 'Weekly'::text AND los_job_det.job_ord_day_n::text = 'Saturday'::text THEN b.acct_wk_beg_d + '6 days'::interval day
+                    WHEN los_job_det.job_freq_n::text = 'Monthly'::text AND los_job_det.job_ord_day_n::text = 'Sunday'::text THEN b.acct_mo_beg_d::timestamp without time zone
+                    WHEN los_job_det.job_freq_n::text = 'Monthly'::text AND los_job_det.job_ord_day_n::text = 'Monday'::text THEN b.acct_mo_beg_d + '1 day'::interval day
+                    WHEN los_job_det.job_freq_n::text = 'Monthly'::text AND los_job_det.job_ord_day_n::text = 'Tuesday'::text THEN b.acct_mo_beg_d + '2 days'::interval day
+                    WHEN los_job_det.job_freq_n::text = 'Monthly'::text AND los_job_det.job_ord_day_n::text = 'Wednesday'::text THEN b.acct_mo_beg_d + '3 days'::interval day
+                    WHEN los_job_det.job_freq_n::text = 'Monthly'::text AND los_job_det.job_ord_day_n::text = 'Thursday'::text THEN b.acct_mo_beg_d + '4 days'::interval day
+                    WHEN los_job_det.job_freq_n::text = 'Monthly'::text AND los_job_det.job_ord_day_n::text = 'Friday'::text THEN b.acct_mo_beg_d + '5 days'::interval day
+                    WHEN los_job_det.job_freq_n::text = 'Monthly'::text AND los_job_det.job_ord_day_n::text = 'Saturday'::text THEN b.acct_mo_beg_d + '6 days'::interval day
+                    WHEN los_job_det.job_freq_n::text = 'Daily'::text THEN b.greg_d::timestamp without time zone
+                    WHEN los_job_det.job_freq_n::text = 'Intraday'::text THEN b.greg_d::timestamp without time zone
+                    ELSE NULL::timestamp without time zone
+                END AS ord_d,
+                CASE
+                    WHEN los_job_det.job_freq_n::text = 'DAILY'::text THEN b.acct_wk_end_d::timestamp without time zone
+                    WHEN los_job_det.job_freq_n::text = 'Intraday'::text THEN b.acct_wk_end_d::timestamp without time zone
+                    WHEN los_job_det.job_freq_n::text = 'Weekly'::text AND los_job_det.job_ord_day_n::text = 'Saturday'::text THEN b.acct_wk_beg_d + '6 days'::interval day
+                    WHEN los_job_det.job_freq_n::text = 'MONTHLY'::text AND los_job_det.job_ord_day_n::text = 'Sunday'::text THEN b.acct_mo_beg_d - '1 day'::interval day
+                    WHEN los_job_det.job_freq_n::text = 'MONTHLY'::text AND los_job_det.job_ord_day_n::text = 'Monday'::text THEN b.acct_mo_beg_d - '1 day'::interval day
+                    WHEN los_job_det.job_freq_n::text = 'MONTHLY'::text AND los_job_det.job_ord_day_n::text = 'Tuesday'::text THEN b.acct_mo_beg_d - '1 day'::interval day
+                    WHEN los_job_det.job_freq_n::text = 'MONTHLY'::text AND los_job_det.job_ord_day_n::text = 'Wednesday'::text THEN b.acct_mo_beg_d - '1 day'::interval day
+                    WHEN los_job_det.job_freq_n::text = 'MONTHLY'::text AND los_job_det.job_ord_day_n::text = 'Thursday'::text THEN b.acct_mo_beg_d - '1 day'::interval day
+                    WHEN los_job_det.job_freq_n::text = 'MONTHLY'::text AND los_job_det.job_ord_day_n::text = 'Friday'::text THEN b.acct_mo_beg_d + '6 days'::interval day
+                    WHEN los_job_det.job_freq_n::text = 'MONTHLY'::text AND los_job_det.job_ord_day_n::text = 'Saturday'::text THEN b.acct_mo_beg_d + '6 days'::interval day
+                    ELSE b.prev_wk_eow_d::timestamp without time zone
+                END AS wk_end_d
+           FROM los.los_job_det
+             JOIN los.cal_date_dim b ON 1 = 1
+          WHERE b.greg_d >= (( SELECT cal_date_dim.acct_yr_beg_d
+                   FROM los.cal_date_dim
+                  WHERE cal_date_dim.greg_d = 'now'::text::date)) AND b.greg_d <= 'now'::text::date) inrq;

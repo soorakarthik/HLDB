@@ -1,0 +1,18 @@
+-- Drop table
+
+-- DROP TABLE los.ssis_job_run_info
+
+CREATE TABLE los.ssis_job_run_info (
+	job_id varchar(50) NULL,
+	job_n varchar(200) NOT NULL,
+	ord_d date NOT NULL,
+	strt_ti timestamp NOT NULL,
+	end_ti timestamp NOT NULL,
+	stat_msg varchar(20) NULL,
+	crte_by varchar(50) NULL,
+	crte_d timestamp NULL,
+	CONSTRAINT pk_ssis_job_run_info PRIMARY KEY (job_n, ord_d)
+)
+WITH (
+	OIDS=FALSE
+) ;

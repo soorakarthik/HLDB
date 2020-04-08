@@ -1,0 +1,16 @@
+-- Drop table
+
+-- DROP TABLE los.los_crit_dq_mdat
+
+CREATE TABLE los.los_crit_dq_mdat (
+	pyrm_n varchar(50) NOT NULL,
+	rpt_n varchar(100) NOT NULL,
+	dq_parm varchar(50) NULL,
+	dq_attr varchar(10000) NULL,
+	max_scr int2 NULL,
+	calc_lgc varchar(10000) NULL,
+	actv_f bpchar(1) NULL
+)
+WITH (
+	OIDS=FALSE
+) ;

@@ -1,0 +1,42 @@
+CREATE OR REPLACE VIEW public.lag_det_v AS
+ SELECT
+        CASE
+            WHEN a.aplt_n::text = 'Sales'::text THEN 'Sales (Demand/Fulfilled)'::character varying
+            WHEN a.prtf_n::text = 'GSCL'::text THEN 'GSCL Data Flow'::character varying
+            ELSE a.prtf_n
+        END AS prtf_n,
+    a.aplt_n,
+    a.job_n,
+    b.strt_ti,
+    b.end_ti,
+    b.dateofdata,
+    b.status,
+    timezone('US/Central'::text, now()) AS curr_ct_ts,
+    a.los_lag_hr_t::time without time zone AS los_lag_hr_t,
+    (timezone('US/Central'::text, now()) - b.dateofdata)::time without time zone AS time_diff,
+        CASE
+            WHEN date_part('epoch'::text, (timezone('US/Central'::text, now()) - b.dateofdata)::time without time zone) > date_part('epoch'::text, a.los_lag_hr_t::interval hour to minute) THEN concat('Lagging Behind by ', (date_part('epoch'::text, (timezone('US/Central'::text, now()) - b.dateofdata)::time without time zone - a.los_lag_hr_t::time without time zone) / 60::double precision)::numeric(10,2), ' mins over the threshold')
+            WHEN (timezone('US/Central'::text, now()) - b.dateofdata) IS NULL THEN 'Job Not Tracked / Job Not Triggered'::text
+            ELSE 'NOT lagging behind'::text
+        END AS lag_status,
+        CASE
+            WHEN date_part('epoch'::text, (timezone('US/Central'::text, now()) - b.dateofdata)::time without time zone) > date_part('epoch'::text, a.los_lag_hr_t::interval hour to minute) THEN 3
+            WHEN (timezone('US/Central'::text, now()) - b.dateofdata) IS NULL THEN 1
+            ELSE 0
+        END AS lag_health
+   FROM lag_job_det a
+     LEFT JOIN ( SELECT src.job_n,
+            src.strt_ti,
+            src.status,
+            src.end_ti,
+            src.dateofdata
+           FROM ( SELECT job_run_info.job_n,
+                    job_run_info.strt_ti,
+                    job_run_info.status,
+                    job_run_info.end_ti,
+                    job_run_info.dateofdata,
+                    row_number() OVER (PARTITION BY job_run_info.job_n ORDER BY job_run_info.end_ti DESC) AS rank_id
+                   FROM los.job_run_info
+                  WHERE (job_run_info.job_n = ANY (ARRAY['shpmt_vsblty_sem_workflow'::text, 'prd_gdf_fnd-digital_shipment'::text, 'goa_fulfillment_workflow_gdf'::text, 'shpmt_vsblty_kfnd_workflow'::text, 'prd_mchan_lite_storesales_15min'::text, 'prd_mchan_lite_invoices_15min'::text, 'prd_mchan_lite_demand_15min'::text, 'dci_kafka_api_workflow'::text, 'ole-osn-fnd-pipeline_prod'::text])) AND job_run_info.dateofdata IS NOT NULL AND job_run_info.ord_d >= ('now'::text::date - 1) AND (job_run_info.status = ANY (ARRAY['COMPLETE'::text, 'IN_PROGRESS'::text, 'SUCCESS'::text]))) src
+          WHERE src.rank_id = 1) b ON lower(a.job_n::text) = b.job_n
+  WHERE a.actv_f = 'Y'::bpchar;

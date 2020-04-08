@@ -1,0 +1,25 @@
+-- Drop table
+
+-- DROP TABLE los.los_crit_job_det_all
+
+CREATE TABLE los.los_crit_job_det_all (
+	pyrm_n varchar(50) NOT NULL,
+	rpt_n varchar(100) NOT NULL,
+	job_n varchar(100) NOT NULL,
+	job_freq_n varchar(20) NOT NULL,
+	job_ord_day_n varchar(20) NOT NULL,
+	job_los_day_n varchar(20) NOT NULL,
+	job_los_day_q int2 NULL,
+	job_cmpl_hr_i int2 NULL,
+	job_los_hr_t varchar(15) NOT NULL,
+	mtrc_ct_q int2 NULL,
+	eff_d date NULL,
+	expr_d date NULL,
+	actv_f varchar(1) NOT NULL,
+	rpt_orig varchar(20) NOT NULL,
+	rpt_tier varchar(10) NOT NULL,
+	src_f varchar(50) NOT NULL
+)
+WITH (
+	OIDS=FALSE
+) ;

@@ -1,0 +1,16 @@
+-- Drop table
+
+-- DROP TABLE los.los_aplt_det
+
+CREATE TABLE los.los_aplt_det (
+	prtf_n varchar(50) NOT NULL,
+	aplt_n varchar(200) NOT NULL,
+	aplt_mtrc_ct_q int2 NULL,
+	aplt_mon_mtrc_q int2 NULL,
+	eff_d date NULL,
+	expr_d date NULL,
+	actv_f bpchar(1) NULL DEFAULT 'N'::bpchar
+)
+WITH (
+	OIDS=FALSE
+) ;

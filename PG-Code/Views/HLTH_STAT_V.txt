@@ -1,0 +1,48 @@
+CREATE OR REPLACE VIEW public.hlth_stat_v AS
+ SELECT a.entity_name AS "Name",
+    a.hipchat_link,
+    a.hipchat_label,
+    a.dashboard_link AS detailed_dashboard,
+    a.detailed_dashboard_label,
+    COALESCE(b.health_status, 1) AS health_code,
+        CASE
+            WHEN b.health_status = 0 THEN 'GREEN'::text
+            WHEN b.health_status = 3 THEN 'RED'::text
+            WHEN b.health_status = 2 THEN 'YELLOW'::text
+            ELSE 'GREY'::text
+        END AS "Health Status",
+    'N/A'::text AS dq_status,
+    a.dq_link,
+    a.object_flag,
+    a.hist_link,
+    b.alert
+   FROM pltf_prtf_det a
+     LEFT JOIN pltf_hlth_curr_v b ON a.entity_name::text = b.platform::text
+  WHERE a.object_flag::text = 'PL'::text AND a.actv_f = 'Y'::bpchar
+UNION ALL
+ SELECT a.entity_name AS "Name",
+    a.hipchat_link,
+    a.hipchat_label,
+    a.dashboard_link AS detailed_dashboard,
+    a.detailed_dashboard_label,
+    b.calc_health AS health_code,
+        CASE
+            WHEN b.calc_health = 0 THEN 'GREEN'::text
+            WHEN b.calc_health = 3 THEN 'RED'::text
+            WHEN b.calc_health = 2 THEN 'YELLOW'::text
+            ELSE 'GREY'::text
+        END AS "Health Status",
+    b.dq_status,
+    a.dq_link,
+    a.object_flag,
+    a.hist_link,
+        CASE
+            WHEN b.calc_health = 0 THEN 'Job flow is Complete'::text
+            WHEN b.calc_health = 3 THEN 'Missed LOS'::text
+            WHEN b.calc_health = 2 THEN 'Job flow is In Progress'::text
+            WHEN b.calc_health = 1 THEN 'One or more jobs yet to trigger'::text
+            ELSE 'Invalid Response'::text
+        END AS alert
+   FROM pltf_prtf_det a
+     LEFT JOIN prtf_hlth_curr_v b ON a.entity_name::text = b.entity_name::text
+  WHERE a.object_flag::text = 'PR'::text AND a.actv_f = 'Y'::bpchar;

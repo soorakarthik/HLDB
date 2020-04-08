@@ -1,0 +1,18 @@
+-- Drop table
+
+-- DROP TABLE public.lag_job_det
+
+CREATE TABLE public.lag_job_det (
+	prtf_n varchar(50) NOT NULL,
+	aplt_n varchar(200) NOT NULL,
+	job_n varchar(200) NOT NULL,
+	ptfrm_n varchar(20) NULL,
+	eff_d date NULL,
+	expr_d date NULL,
+	actv_f bpchar(1) NULL,
+	los_lag_hr_t varchar(15) NULL,
+	job_desc_t varchar(150) NULL
+)
+WITH (
+	OIDS=FALSE
+) ;

@@ -1,0 +1,26 @@
+-- Drop table
+
+-- DROP TABLE los.dly_job_det
+
+CREATE TABLE los.dly_job_det (
+	prtf_n varchar(50) NOT NULL,
+	aplt_n varchar(200) NOT NULL,
+	job_n varchar(200) NOT NULL,
+	job_freq_n varchar(20) NOT NULL,
+	job_ord_d date NOT NULL,
+	rpt_d date NOT NULL,
+	job_start_time varchar(20) NOT NULL,
+	job_end_time varchar(20) NOT NULL,
+	sa_los_time timestamp NOT NULL,
+	wk_end_d date NOT NULL,
+	job_mtrc_ct_q int4 NULL,
+	los_status varchar(20) NOT NULL,
+	los_value int2 NOT NULL,
+	job_compl_status varchar(20) NULL,
+	category varchar(20) NOT NULL,
+	rpt_day_n varchar(10) NULL,
+	CONSTRAINT pk_dly_job_det PRIMARY KEY (prtf_n, aplt_n, job_n, rpt_d)
+)
+WITH (
+	OIDS=FALSE
+) ;

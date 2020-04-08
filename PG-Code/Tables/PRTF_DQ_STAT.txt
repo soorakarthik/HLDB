@@ -1,0 +1,12 @@
+-- Drop table
+
+-- DROP TABLE public.prtf_dq_stat
+
+CREATE TABLE public.prtf_dq_stat (
+	portfolio_name varchar(100) NULL,
+	dq_status text NULL,
+	pg_timestamp timestamp NULL DEFAULT now()
+)
+WITH (
+	OIDS=FALSE
+) ;

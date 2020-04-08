@@ -1,0 +1,19 @@
+CREATE OR REPLACE VIEW los.los_mon_ytd_denr AS
+ SELECT DISTINCT a.prtf_n,
+    a.aplt_n,
+        CASE
+            WHEN b.job_freq_n::text = 'Monthly'::text AND c.acct_mo_wk_i <> 1 AND a.aplt_n::text = 'P&L'::text THEN 0
+            ELSE a.aplt_mon_mtrc_q::integer
+        END AS aplt_mon_mtrc_q,
+    c.greg_d,
+    c.day_n,
+    c.acct_wk_end_d,
+    a.eff_d,
+    a.expr_d,
+    a.actv_f
+   FROM los.los_aplt_det a
+     JOIN los.los_job_det b ON a.prtf_n::text = b.prtf_n::text AND a.aplt_n::text = b.aplt_n::text
+     JOIN los.cal_date_dim c ON 1 = 1
+  WHERE c.day_n::text = 'Monday'::text AND c.greg_d >= (( SELECT cal_date_dim.acct_yr_beg_d
+           FROM los.cal_date_dim
+          WHERE cal_date_dim.greg_d = 'now'::text::date)) AND c.greg_d <= 'now'::text::date AND c.acct_wk_end_d >= a.eff_d AND c.acct_wk_end_d <= a.expr_d AND c.acct_wk_end_d < 'now'::text::date AND (a.aplt_n::text <> ALL (ARRAY['CCO'::character varying, 'TMDW_Payroll_Weekly'::character varying, 'STORE_AGI'::character varying]::text[])) AND b.mstr_end_job_f = 'Y'::bpchar AND a.aplt_mon_mtrc_q <> 0;

@@ -1,0 +1,11 @@
+-- Drop table
+
+-- DROP TABLE los.dataportal_lastrun_timestamps
+
+CREATE TABLE los.dataportal_lastrun_timestamps (
+	job_name text NULL,
+	last_timestamp timestamp NULL
+)
+WITH (
+	OIDS=FALSE
+) ;

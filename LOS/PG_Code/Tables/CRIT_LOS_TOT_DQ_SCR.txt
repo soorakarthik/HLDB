@@ -1,0 +1,15 @@
+-- Drop table
+
+-- DROP TABLE los.crit_los_tot_dq_scr
+
+CREATE TABLE los.crit_los_tot_dq_scr (
+	pyrm_n varchar(50) NOT NULL,
+	rpt_n varchar(100) NOT NULL,
+	tot_dq_scr int2 NULL,
+	eff_d date NULL,
+	expr_d date NULL,
+	actv_f bpchar(1) NULL
+)
+WITH (
+	OIDS=FALSE
+) ;

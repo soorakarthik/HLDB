@@ -1,0 +1,16 @@
+CREATE OR REPLACE VIEW public.prtf_hlth_curr_v1 AS
+ SELECT qry2.entity_name,
+    qry2.calc_health
+   FROM ( SELECT md.entity_name,
+            qry1.health_status,
+            COALESCE(qry1.health_status, 1) AS calc_health,
+            COALESCE(qry1.pg_timestamp::timestamp with time zone, now()) AS cal_ts,
+            row_number() OVER (PARTITION BY md.entity_name ORDER BY (COALESCE(qry1.pg_timestamp::timestamp with time zone, now())) DESC) AS rank_id
+           FROM ( SELECT prtf_curr_stat.portfolio_name,
+                    prtf_curr_stat.health_status,
+                    prtf_curr_stat.pg_timestamp
+                   FROM prtf_curr_stat
+                  WHERE prtf_curr_stat.pg_timestamp > (now() - '00:30:00'::interval)) qry1
+             RIGHT JOIN pltf_prtf_det md ON md.entity_name::text = qry1.portfolio_name::text
+          WHERE md.object_flag::text = 'PR'::text) qry2
+  WHERE qry2.rank_id = 1;

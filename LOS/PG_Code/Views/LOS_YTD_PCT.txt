@@ -1,0 +1,23 @@
+CREATE OR REPLACE VIEW los.los_ytd_pct AS
+ SELECT a.prtf_n,
+    COALESCE(sum(a.job_met_count), 0::numeric) AS job_met_count,
+    sum(a.los_cnt) AS los_cnt,
+    COALESCE(round(100::numeric * (sum(a.job_met_count) / sum(a.los_cnt::numeric(10,4))), 2), 0::numeric) AS los_pct
+   FROM ( SELECT los_wkly_rpt.prtf_n,
+            los_wkly_rpt.aplt_n,
+            los_wkly_rpt.rpt_wk_end_d,
+            los_wkly_rpt.job_met_count,
+            los_wkly_rpt.los_cnt,
+            los_wkly_rpt.los_pct
+           FROM los.los_wkly_rpt
+          WHERE los_wkly_rpt.aplt_n IS NULL
+        UNION ALL
+         SELECT 'Overall'::character varying(10) AS prtf_n,
+            los_wkly_rpt.aplt_n,
+            los_wkly_rpt.rpt_wk_end_d,
+            los_wkly_rpt.job_met_count,
+            los_wkly_rpt.los_cnt,
+            los_wkly_rpt.los_pct
+           FROM los.los_wkly_rpt
+          WHERE los_wkly_rpt.aplt_n IS NULL) a
+  GROUP BY a.prtf_n;

@@ -1,0 +1,22 @@
+CREATE OR REPLACE VIEW los.los_dlay_min AS
+ SELECT dly_job_det.prtf_n,
+    dly_job_det.aplt_n,
+    dly_job_det.job_n,
+    dly_job_det.job_freq_n,
+    dly_job_det.job_ord_d,
+    dly_job_det.rpt_d,
+    dly_job_det.job_start_time,
+    dly_job_det.job_end_time,
+    dly_job_det.sa_los_time,
+        CASE
+            WHEN dly_job_det.job_end_time::text = 'Job Not Triggered'::text THEN 'Job Not Triggered'::text
+            ELSE (((dly_job_det.job_end_time::timestamp without time zone::date - dly_job_det.sa_los_time::date) * (24 * 60))::double precision + (date_part('hour'::text, dly_job_det.job_end_time::timestamp without time zone) - date_part('hour'::text, dly_job_det.sa_los_time)) * 60::double precision + (date_part('minute'::text, dly_job_det.job_end_time::timestamp without time zone) - date_part('minute'::text, dly_job_det.sa_los_time)))::text
+        END AS delay_in_min,
+    dly_job_det.wk_end_d,
+    dly_job_det.los_status,
+    dly_job_det.category,
+    dly_job_det.rpt_day_n
+   FROM los.dly_job_det
+  WHERE dly_job_det.category::text = 'BIE Flow'::text AND dly_job_det.los_status::text = 'NOT-MET'::text AND dly_job_det.wk_end_d >= (( SELECT cal_date_dim.acct_yr_beg_d
+           FROM los.cal_date_dim
+          WHERE cal_date_dim.greg_d = 'now'::text::date));

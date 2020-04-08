@@ -1,0 +1,17 @@
+-- Drop table
+
+-- DROP TABLE los.dataportal_job_metadata_land
+
+CREATE TABLE los.dataportal_job_metadata_land (
+	platform text NULL,
+	source_name text NULL,
+	job_name text NULL,
+	job_type text NULL,
+	job_owner text NULL,
+	job_creator text NULL,
+	objectuuid text NULL
+)
+WITH (
+	OIDS=FALSE
+) ;
+CREATE INDEX objectuuid_index ON los.dataportal_job_metadata_land USING btree (objectuuid) ;

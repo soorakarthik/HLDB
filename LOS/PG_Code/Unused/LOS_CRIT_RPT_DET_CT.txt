@@ -1,0 +1,36 @@
+CREATE OR REPLACE VIEW los.los_crit_rpt_det_ct AS
+ SELECT DISTINCT a.pyrm_n,
+    a.rpt_n,
+    a.crit_mtrc_n,
+    a.job_freq_n,
+    a.job_los_day_n,
+        CASE
+            WHEN a.job_freq_n::text = 'Monthly'::text AND a.acct_mo_wk_i <> 1 THEN 0
+            ELSE a.mtrc_ct_q::integer
+        END AS mtrc_ct_q,
+    a.acct_mo_wk_n,
+    a.acct_wk_end_d,
+    a.eff_d,
+    a.expr_d,
+    a.actv_f
+   FROM ( SELECT a_1.pyrm_n,
+            a_1.rpt_n,
+            a_1.crit_mtrc_n,
+            b.job_freq_n,
+            b.job_los_day_n,
+            a_1.mtrc_ct_q,
+            c.acct_mo_i,
+            c.acct_mo_wk_i,
+            c.acct_mo_wk_n,
+            c.acct_wk_end_d,
+            c.greg_d,
+            a_1.eff_d,
+            a_1.expr_d,
+            a_1.actv_f
+           FROM los.los_crit_rpt_det a_1
+             JOIN los.los_crit_job_det b ON a_1.pyrm_n::text = b.pyrm_n::text AND a_1.rpt_n::text = b.rpt_n::text AND a_1.crit_mtrc_n::text = b.crit_mtrc_n::text
+             JOIN los.cal_date_dim_v c ON 1 = 1
+          WHERE c.greg_d >= (( SELECT cal_date_dim_v.acct_yr_beg_d
+                   FROM los.cal_date_dim_v
+                  WHERE cal_date_dim_v.greg_d = 'now'::text::date)) AND c.greg_d <= 'now'::text::date) a
+  WHERE a.acct_wk_end_d < 'now'::text::date;

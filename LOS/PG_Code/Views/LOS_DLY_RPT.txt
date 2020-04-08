@@ -1,0 +1,69 @@
+CREATE OR REPLACE VIEW los.los_dly_rpt AS
+ SELECT d.prtf_n,
+    d.aplt_n,
+    d.job_n,
+    d.job_freq_n,
+    d.ord_d AS job_ord_d,
+    d.rpt_d,
+        CASE
+            WHEN d.start_time IS NULL THEN 'Job Not Triggered'::character varying
+            ELSE d.start_time
+        END AS job_start_time,
+        CASE
+            WHEN d.end_time IS NULL THEN 'Job Not Triggered'::character varying
+            ELSE d.end_time
+        END AS job_end_time,
+    d.los_time AS sa_los_time,
+    d.los_status,
+        CASE
+            WHEN d.los_status = 'MET'::text THEN 1
+            ELSE 0
+        END AS los_value,
+    d.status,
+    d.category
+   FROM ( SELECT a.prtf_n,
+            a.aplt_n,
+            a.job_n,
+            b.job_n AS job_mem_name,
+            a.job_freq_n,
+            a.ord_d,
+            a.rpt_d,
+            a.job_ord_day_n,
+    		a.day_n,
+    		a.rpt_day_n,
+            b.strt_ti::character varying(19) AS start_time,
+            b.end_ti::character varying(19) AS end_time,
+            a.wk_end_d,
+            COALESCE((b.ord_d + a.job_los_day_q::integer)::timestamp(0) without time zone + a.job_los_hr_t::interval hour to minute, (a.ord_d + a.job_los_day_q::integer)::timestamp(0) without time zone + a.job_los_hr_t::interval hour to minute) AS los_time,
+                CASE
+                    WHEN b.end_ti <= ((b.ord_d + a.job_los_day_q::integer)::timestamp(0) without time zone + a.job_los_hr_t::interval hour to minute) THEN 'MET'::text
+                    ELSE 'NOT-MET'::text
+                END AS los_status,
+            b.strt_ti,
+            b.end_ti,
+            b.status,
+            a.category
+           FROM los.mstr_job_det a
+             LEFT JOIN ( SELECT src.job_n,
+                    src.ord_d,
+                    src.strt_ti,
+                    src.status,
+                    src.end_ti
+                   FROM ( SELECT job_run_info.job_n,
+                            job_run_info.ord_d,
+                            job_run_info.strt_ti,
+                            job_run_info.status,
+                            job_run_info.end_ti,
+                            row_number() OVER (PARTITION BY job_run_info.job_n, job_run_info.ord_d ORDER BY job_run_info.strt_ti) AS rank_id
+                           FROM los.job_run_info
+                          WHERE job_run_info.ord_d >= ('now'::text::date - 5) AND (job_run_info.status = ANY (ARRAY['COMPLETE'::text, 'SUCCESS'::text]))) src
+                  WHERE src.rank_id = 1) b ON lower(a.job_n::text) = b.job_n AND a.greg_d = b.ord_d AND a.ord_d = b.ord_d
+          WHERE a.actv_f = 'Y'::bpchar AND a.wk_end_d >= a.eff_d AND a.wk_end_d <= a.expr_d AND a.ord_d = a.greg_d AND a.rpt_d = 'now'::text::date AND a.category = 'BIE Flow'::text) d
+  WHERE (d.los_time < timezone('US/Central'::text, now()) OR d.los_status = 'MET'::text)
+  AND (d.aplt_n::text || d.day_n::text) <> ('VIP'::text || 'Saturday'::text) and
+  /*(d.job_n::text || d.day_n::text) <> ('sed37tic2295u'::text || 'Saturday'::text) AND (d.job_n::text || d.day_n::text) <> ('sed37tic2305u'::text || 'Saturday'::text) and
+  (d.job_n::text || d.day_n::text) <> ('sed37tic2310u'::text || 'Saturday'::text) AND (d.job_n::text || d.day_n::text) <> ('sed37tic2320u'::text || 'Saturday'::text) and
+  (d.job_n::text || d.day_n::text) <> ('sed37tic2390u'::text || 'Saturday'::text) AND (d.job_n::text || d.day_n::text) <> ('sed37tic2285u'::text || 'Saturday'::text) and
+  (d.job_n::text || d.day_n::text) <> ('sed37tic2385u'::text || 'Saturday'::text) and*/
+  (d.aplt_n::text || d.job_ord_day_n::text || d.rpt_day_n::text) <> ('Sales&Payroll'::text || 'Daily'::text || 'Sunday'::text) AND
+  (d.aplt_n::text || d.day_n::text) <> ('Business Review'::text || 'Saturday'::text) AND (d.aplt_n::text || d.day_n::text) <> ('Business Review'::text || 'Sunday'::text);

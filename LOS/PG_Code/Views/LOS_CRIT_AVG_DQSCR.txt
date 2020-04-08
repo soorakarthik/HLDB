@@ -1,0 +1,11 @@
+CREATE OR REPLACE VIEW los.los_crit_avg_dqscr AS
+ SELECT a.pyrm_n,
+    a.rpt_n,
+    a.dq_scr_freq,
+    COALESCE(b.wk_dq_scr, 0::bigint) AS wk_dq_scr,
+    a.calc_tot_dq_scr,
+    COALESCE(b.wk_dq_scr::numeric(5,2) / a.calc_tot_dq_scr::numeric(5,2) * 100::numeric, 0::numeric)::numeric(6,2) AS avg_dq_scr,
+    a.acct_wk_end_d
+   FROM los.los_crit_dqscr_dr a
+     LEFT JOIN los.los_crit_dqscr_nr b ON a.pyrm_n::text = b.pyrm_n::text AND a.rpt_n::text = b.rpt_n::text AND a.acct_wk_end_d = b.wk_end_d
+  WHERE a.acct_wk_end_d < 'now'::text::date;

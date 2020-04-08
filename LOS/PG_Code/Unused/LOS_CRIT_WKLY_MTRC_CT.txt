@@ -1,0 +1,36 @@
+CREATE OR REPLACE VIEW los.los_crit_wkly_mtrc_ct AS
+ SELECT src.pyrm_n,
+    src.rpt_n,
+    src.crit_mtrc_n,
+    src.wk_end_d AS rpt_wk_end_d,
+    src.rpt_orig,
+    src.rpt_tier,
+    sum(src.mtrc_ct_q) AS job_met_count
+   FROM ( SELECT DISTINCT a.pyrm_n,
+            a.rpt_n,
+            a.crit_mtrc_n,
+            a.wk_end_d,
+                CASE
+                    WHEN b.end_ti <= ((b.ord_d + a.job_los_day_q::integer)::timestamp(0) without time zone + a.job_los_hr_t::interval hour to minute) THEN a.mtrc_ct_q::integer
+                    WHEN a.job_freq_n::text = 'Intraday'::text THEN 1
+                    ELSE 0
+                END AS mtrc_ct_q,
+            b.rerun_ct_q,
+            b.strt_ti,
+            b.job_n,
+            a.ord_d,
+            a.rpt_orig,
+            a.rpt_tier
+           FROM los.los_crit_job_det_rpt a
+             JOIN los.los_job_run_info b ON a.job_n::text = b.job_n::text AND a.greg_d = b.ord_d AND a.ord_d = b.ord_d
+          WHERE a.wk_end_d >= a.eff_d AND a.wk_end_d <= a.expr_d AND b.end_stat_c = 16 AND a.wk_end_d < 'now'::text::date) src
+     JOIN ( SELECT los_job_run_info.job_n,
+            los_job_run_info.ord_d,
+            min(los_job_run_info.rerun_ct_q) AS max_rerun_ct_q,
+            min(los_job_run_info.strt_ti) AS min_start_ti
+           FROM los.los_job_run_info
+          WHERE los_job_run_info.ord_d >= (( SELECT cal_date_dim_v.acct_yr_beg_d
+                   FROM los.cal_date_dim_v
+                  WHERE cal_date_dim_v.greg_d = 'now'::text::date)) AND los_job_run_info.ord_d <= 'now'::text::date AND los_job_run_info.data_cntr_n::text = 'UX_CTMPROD'::text AND los_job_run_info.end_stat_c = 16
+          GROUP BY los_job_run_info.job_n, los_job_run_info.ord_d) tgt ON src.job_n::text = tgt.job_n::text AND src.ord_d = tgt.ord_d AND src.rerun_ct_q = tgt.max_rerun_ct_q AND src.strt_ti = tgt.min_start_ti
+  GROUP BY src.pyrm_n, src.rpt_n, src.crit_mtrc_n, src.wk_end_d, src.rpt_orig, src.rpt_tier;

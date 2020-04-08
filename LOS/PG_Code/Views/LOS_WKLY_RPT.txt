@@ -1,0 +1,37 @@
+CREATE OR REPLACE VIEW los.los_wkly_rpt AS
+ SELECT a.prtf_n,
+    a.aplt_n,
+    a.rpt_wk_end_d,
+    a.job_met_count,
+    a.los_cnt,
+        CASE
+            WHEN a.los_cnt = 0 THEN NULL::numeric
+            ELSE a.los_pct
+        END AS los_pct
+   FROM ( SELECT DISTINCT a_1.prtf_n,
+            a_1.aplt_n,
+            COALESCE(b.rpt_wk_end_d, a_1.acct_wk_end_d) AS rpt_wk_end_d,
+            COALESCE(b.job_met_count, 0::bigint) AS job_met_count,
+            a_1.aplt_mtrc_ct_q AS los_cnt,
+            COALESCE(round((100 * b.job_met_count)::numeric / a_1.aplt_mtrc_ct_q::numeric(10,2), 2), 0::numeric) AS los_pct
+           FROM los.los_aplt_det_ct a_1
+             LEFT JOIN los.los_wkly_mtrc_ct b ON a_1.prtf_n::text = b.prtf_n::text AND a_1.aplt_n::text = b.aplt_n::text AND b.rpt_wk_end_d >= a_1.eff_d AND b.rpt_wk_end_d <= a_1.expr_d AND b.rpt_wk_end_d = a_1.acct_wk_end_d AND b.rpt_wk_end_d < 'now'::text::date
+          WHERE COALESCE(b.rpt_wk_end_d, a_1.acct_wk_end_d) >= a_1.eff_d AND COALESCE(b.rpt_wk_end_d, a_1.acct_wk_end_d) <= a_1.expr_d
+        UNION ALL
+         SELECT a_1.prtf_n,
+            a_1.aplt_n,
+            a_1.rpt_wk_end_d,
+            COALESCE(sum(a_1.job_met_count), 0::numeric) AS job_met_count,
+            sum(a_1.aplt_mtrc_ct_q) AS los_cnt,
+            COALESCE(round(100::numeric * (sum(a_1.job_met_count) / sum(a_1.aplt_mtrc_ct_q::numeric(10,4))), 2), 0::numeric) AS los_pct
+           FROM ( SELECT a_2.prtf_n,
+                    NULL::character(1) AS aplt_n,
+                    COALESCE(b.rpt_wk_end_d, a_2.acct_wk_end_d) AS rpt_wk_end_d,
+                    COALESCE(b.job_met_count, 0::bigint) AS job_met_count,
+                    a_2.aplt_mtrc_ct_q,
+                    a_2.eff_d,
+                    a_2.expr_d
+                   FROM los.los_aplt_det_ct a_2
+                     LEFT JOIN los.los_wkly_mtrc_ct b ON a_2.prtf_n::text = b.prtf_n::text AND a_2.aplt_n::text = b.aplt_n::text AND b.rpt_wk_end_d = a_2.acct_wk_end_d AND b.rpt_wk_end_d < 'now'::text::date
+                  WHERE COALESCE(b.rpt_wk_end_d, a_2.acct_wk_end_d) >= a_2.eff_d AND COALESCE(b.rpt_wk_end_d, a_2.acct_wk_end_d) <= a_2.expr_d) a_1
+          GROUP BY a_1.prtf_n, a_1.aplt_n, a_1.rpt_wk_end_d) a;

@@ -1,0 +1,107 @@
+CREATE OR REPLACE VIEW los.los_crit_domo_job_det_rpt AS
+ SELECT tbl.pyrm_n,
+    tbl.domo_tbl_n,
+    tbl.job_n,
+    tbl.job_freq_n,
+    tbl.job_ord_day_n,
+    tbl.job_los_day_n,
+    tbl.job_los_day_q,
+    tbl.job_los_hr_t,
+    tbl.job_cmpl_hr_i,
+    tbl.mtrc_ct_q,
+    tbl.eff_d,
+    tbl.expr_d,
+    tbl.actv_f,
+    tbl.rpt_orig,
+    tbl.rpt_tier,
+    tbl.greg_d,
+    tbl.day_n,
+    tbl.rpt_day_n,
+    tbl.ord_d,
+    tbl.ord_d::date + tbl.job_los_day_q::integer AS rpt_d,
+    tbl.wk_end_d
+   FROM ( SELECT los_crit_domo_job_det.pyrm_n,
+            los_crit_domo_job_det.domo_tbl_n,
+            los_crit_domo_job_det.job_n,
+            los_crit_domo_job_det.job_freq_n,
+            los_crit_domo_job_det.job_ord_day_n,
+            los_crit_domo_job_det.job_los_day_n,
+            los_crit_domo_job_det.job_los_day_q,
+            los_crit_domo_job_det.job_los_hr_t,
+            los_crit_domo_job_det.job_cmpl_hr_i,
+            los_crit_domo_job_det.mtrc_ct_q,
+            los_crit_domo_job_det.eff_d,
+            los_crit_domo_job_det.expr_d,
+            los_crit_domo_job_det.actv_f,
+            los_crit_domo_job_det.rpt_orig,
+            los_crit_domo_job_det.rpt_tier,
+            b.greg_d,
+                CASE
+                    WHEN los_crit_domo_job_det.job_freq_n::text = ANY (ARRAY['Daily'::character varying, 'Intraday'::character varying]::text[]) THEN b.day_n
+                    ELSE los_crit_domo_job_det.job_ord_day_n
+                END AS day_n,
+                CASE
+                    WHEN (los_crit_domo_job_det.job_freq_n::text = ANY (ARRAY['Daily'::character varying, 'Intraday'::character varying]::text[])) AND los_crit_domo_job_det.job_los_day_n::text = 'Next-Day'::text THEN
+                    CASE
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 0 THEN 'Tuesday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 1 THEN 'Wednesday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 2 THEN 'Thursday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 3 THEN 'Friday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 4 THEN 'Saturday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 5 THEN 'Sunday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 6 THEN 'Monday'::text
+                        ELSE NULL::text
+                    END::character varying
+                    WHEN (los_crit_domo_job_det.job_freq_n::text = ANY (ARRAY['Daily'::character varying, 'Intraday'::character varying]::text[])) AND los_crit_domo_job_det.job_los_day_n::text = 'Day-After-Next'::text THEN
+                    CASE
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 0 THEN 'Wednesday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 1 THEN 'Thursday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 2 THEN 'Friday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 3 THEN 'Saturday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 4 THEN 'Sunday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 5 THEN 'Monday'::text
+                        WHEN mod(b.greg_d - '1900-01-01'::date, 7) = 6 THEN 'Tuesday'::text
+                        ELSE NULL::text
+                    END::character varying
+                    ELSE los_crit_domo_job_det.job_los_day_n
+                END AS rpt_day_n,
+                CASE
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'WEEKLY'::text AND los_crit_domo_job_det.job_ord_day_n::text = 'SUNDAY'::text THEN b.acct_wk_beg_d::timestamp without time zone
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'WEEKLY'::text AND los_crit_domo_job_det.job_ord_day_n::text = 'MONDAY'::text THEN b.acct_wk_beg_d + '1 day'::interval day
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'WEEKLY'::text AND los_crit_domo_job_det.job_ord_day_n::text = 'TUESDAY'::text THEN b.acct_wk_beg_d + '2 days'::interval day
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'WEEKLY'::text AND los_crit_domo_job_det.job_ord_day_n::text = 'WEDNESDAY'::text THEN b.acct_wk_beg_d + '3 days'::interval day
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'WEEKLY'::text AND los_crit_domo_job_det.job_ord_day_n::text = 'THURSDAY'::text THEN b.acct_wk_beg_d + '4 days'::interval day
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'WEEKLY'::text AND los_crit_domo_job_det.job_ord_day_n::text = 'FRIDAY'::text THEN b.acct_wk_beg_d + '5 days'::interval day
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'WEEKLY'::text AND los_crit_domo_job_det.job_ord_day_n::text = 'SATURDAY'::text THEN b.acct_wk_beg_d + '6 days'::interval day
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'MONTHLY'::text AND los_crit_domo_job_det.job_ord_day_n::text = 'SUNDAY'::text THEN b.acct_mo_beg_d::timestamp without time zone
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'MONTHLY'::text AND los_crit_domo_job_det.job_ord_day_n::text = 'MONDAY'::text THEN b.acct_mo_beg_d + '1 day'::interval day
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'MONTHLY'::text AND los_crit_domo_job_det.job_ord_day_n::text = 'TUESDAY'::text THEN b.acct_mo_beg_d + '2 days'::interval day
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'MONTHLY'::text AND los_crit_domo_job_det.job_ord_day_n::text = 'WEDNESDAY'::text THEN b.acct_mo_beg_d + '3 days'::interval day
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'MONTHLY'::text AND los_crit_domo_job_det.job_ord_day_n::text = 'THURSDAY'::text THEN b.acct_mo_beg_d + '4 days'::interval day
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'MONTHLY'::text AND los_crit_domo_job_det.job_ord_day_n::text = 'FRIDAY'::text THEN b.acct_mo_beg_d + '5 days'::interval day
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'MONTHLY'::text AND los_crit_domo_job_det.job_ord_day_n::text = 'SATURDAY'::text THEN b.acct_mo_beg_d + '6 days'::interval day
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'DAILY'::text THEN b.greg_d::timestamp without time zone
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'Intraday'::text THEN b.greg_d::timestamp without time zone
+                    ELSE NULL::timestamp without time zone
+                END AS ord_d,
+                CASE
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'DAILY'::text THEN b.acct_wk_end_d::timestamp without time zone
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'Intraday'::text THEN b.acct_wk_end_d::timestamp without time zone
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'Weekly'::text AND (los_crit_domo_job_det.job_los_day_n::text = ANY (ARRAY['Wednesday'::character varying, 'Thursday'::character varying]::text[])) THEN b.acct_wk_beg_d + '13 days'::interval day
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'Weekly'::text AND los_crit_domo_job_det.job_los_day_n::text = 'Friday'::text THEN b.acct_wk_beg_d + '6 days'::interval day
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'WEEKLY'::text AND los_crit_domo_job_det.job_ord_day_n::text = 'SATURDAY'::text THEN b.acct_wk_beg_d + '6 days'::interval day
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'WEEKLY'::text AND los_crit_domo_job_det.job_ord_day_n::text = 'TUESDAY'::text AND los_crit_domo_job_det.job_n::text = 'EFD060535U'::text THEN b.acct_wk_beg_d + '6 days'::interval day
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'MONTHLY'::text AND los_crit_domo_job_det.job_ord_day_n::text = 'SUNDAY'::text THEN b.acct_mo_beg_d - '1 day'::interval day
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'MONTHLY'::text AND los_crit_domo_job_det.job_ord_day_n::text = 'MONDAY'::text THEN b.acct_mo_beg_d - '1 day'::interval day
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'MONTHLY'::text AND los_crit_domo_job_det.job_ord_day_n::text = 'TUESDAY'::text THEN b.acct_mo_beg_d - '1 day'::interval day
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'MONTHLY'::text AND los_crit_domo_job_det.job_ord_day_n::text = 'WEDNESDAY'::text THEN b.acct_mo_beg_d - '1 day'::interval day
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'MONTHLY'::text AND los_crit_domo_job_det.job_ord_day_n::text = 'THURSDAY'::text THEN b.acct_mo_beg_d - '1 day'::interval day
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'MONTHLY'::text AND los_crit_domo_job_det.job_ord_day_n::text = 'FRIDAY'::text THEN b.acct_mo_beg_d + '6 days'::interval day
+                    WHEN los_crit_domo_job_det.job_freq_n::text = 'MONTHLY'::text AND los_crit_domo_job_det.job_ord_day_n::text = 'SATURDAY'::text THEN b.acct_mo_beg_d + '6 days'::interval day
+                    ELSE b.prev_wk_eow_d::timestamp without time zone
+                END AS wk_end_d
+           FROM los.los_crit_domo_job_det
+             JOIN los.cal_date_dim_v b ON 1 = 1
+          WHERE b.greg_d >= (( SELECT cal_date_dim_v.acct_yr_beg_d
+                   FROM los.cal_date_dim_v
+                  WHERE cal_date_dim_v.greg_d = 'now'::text::date)) AND b.greg_d <= 'now'::text::date) tbl;
